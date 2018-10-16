@@ -10,7 +10,7 @@ import UIKit
 import CloudKit
 import os.log
 
-class DetailViewController: UITableViewController {
+class ToDosViewController: UITableViewController {
 
     let cloud = ToDoCloud.shared
 

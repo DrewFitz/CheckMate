@@ -8,25 +8,27 @@
 
 /* Begin PBXBuildFile section */
 		BBA56DBD21751FAE00083938 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA56DBC21751FAE00083938 /* AppDelegate.swift */; };
-		BBA56DBF21751FAE00083938 /* MasterViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA56DBE21751FAE00083938 /* MasterViewController.swift */; };
-		BBA56DC121751FAE00083938 /* DetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA56DC021751FAE00083938 /* DetailViewController.swift */; };
+		BBA56DBF21751FAE00083938 /* ListsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA56DBE21751FAE00083938 /* ListsViewController.swift */; };
+		BBA56DC121751FAE00083938 /* ToDosViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA56DC021751FAE00083938 /* ToDosViewController.swift */; };
 		BBA56DC421751FAE00083938 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BBA56DC221751FAE00083938 /* Main.storyboard */; };
 		BBA56DC621751FB000083938 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BBA56DC521751FB000083938 /* Assets.xcassets */; };
 		BBA56DC921751FB000083938 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BBA56DC721751FB000083938 /* LaunchScreen.storyboard */; };
 		BBA56DD321751FDD00083938 /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBA56DD221751FDD00083938 /* CloudKit.framework */; };
+		BBA56DD5217690EE00083938 /* ToDoCloud.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA56DD4217690EE00083938 /* ToDoCloud.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		BBA56DB921751FAE00083938 /* CheckMate-ToDo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CheckMate-ToDo.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBA56DBC21751FAE00083938 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		BBA56DBE21751FAE00083938 /* MasterViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MasterViewController.swift; sourceTree = "<group>"; };
-		BBA56DC021751FAE00083938 /* DetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViewController.swift; sourceTree = "<group>"; };
+		BBA56DBE21751FAE00083938 /* ListsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsViewController.swift; sourceTree = "<group>"; };
+		BBA56DC021751FAE00083938 /* ToDosViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToDosViewController.swift; sourceTree = "<group>"; };
 		BBA56DC321751FAE00083938 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		BBA56DC521751FB000083938 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BBA56DC821751FB000083938 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		BBA56DCA21751FB000083938 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BBA56DD021751FDB00083938 /* CheckMate-ToDo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "CheckMate-ToDo.entitlements"; sourceTree = "<group>"; };
 		BBA56DD221751FDD00083938 /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
+		BBA56DD4217690EE00083938 /* ToDoCloud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToDoCloud.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,8 +65,9 @@
 			children = (
 				BBA56DD021751FDB00083938 /* CheckMate-ToDo.entitlements */,
 				BBA56DBC21751FAE00083938 /* AppDelegate.swift */,
-				BBA56DBE21751FAE00083938 /* MasterViewController.swift */,
-				BBA56DC021751FAE00083938 /* DetailViewController.swift */,
+				BBA56DBE21751FAE00083938 /* ListsViewController.swift */,
+				BBA56DD4217690EE00083938 /* ToDoCloud.swift */,
+				BBA56DC021751FAE00083938 /* ToDosViewController.swift */,
 				BBA56DC221751FAE00083938 /* Main.storyboard */,
 				BBA56DC521751FB000083938 /* Assets.xcassets */,
 				BBA56DC721751FB000083938 /* LaunchScreen.storyboard */,
@@ -166,9 +169,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BBA56DC121751FAE00083938 /* DetailViewController.swift in Sources */,
-				BBA56DBF21751FAE00083938 /* MasterViewController.swift in Sources */,
+				BBA56DC121751FAE00083938 /* ToDosViewController.swift in Sources */,
+				BBA56DBF21751FAE00083938 /* ListsViewController.swift in Sources */,
 				BBA56DBD21751FAE00083938 /* AppDelegate.swift in Sources */,
+				BBA56DD5217690EE00083938 /* ToDoCloud.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

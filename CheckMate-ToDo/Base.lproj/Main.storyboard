@@ -22,7 +22,7 @@
                 </navigationController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="8fS-aE-onr" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-38" y="-630"/>
+            <point key="canvasLocation" x="-46" y="-630"/>
         </scene>
         <!--Split View Controller-->
         <scene sceneID="Nki-YV-4Qg">
@@ -36,12 +36,12 @@
                 </splitViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="cZU-Oi-B1e" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-856" y="-330"/>
+            <point key="canvasLocation" x="-799" y="-630"/>
         </scene>
-        <!--Master-->
+        <!--Lists-->
         <scene sceneID="smW-Zh-WAh">
             <objects>
-                <tableViewController title="Master" clearsSelectionOnViewWillAppear="NO" id="7bK-jq-Zjz" customClass="MasterViewController" customModule="CheckMate_ToDo" customModuleProvider="target" sceneMemberID="viewController">
+                <tableViewController title="Master" clearsSelectionOnViewWillAppear="NO" id="7bK-jq-Zjz" userLabel="Lists" customClass="ListsViewController" customModule="CheckMate_ToDo" customModuleProvider="target" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" id="r7i-6Z-zg0">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -79,7 +79,7 @@
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="Rux-fX-hf1" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="709" y="-630"/>
+            <point key="canvasLocation" x="702" y="-630"/>
         </scene>
         <!--Navigation Controller-->
         <scene sceneID="r7l-gg-dq7">
@@ -97,10 +97,10 @@
             </objects>
             <point key="canvasLocation" x="-45" y="129"/>
         </scene>
-        <!--Detail View Controller-->
+        <!--Todos-->
         <scene sceneID="gsc-SY-lbF">
             <objects>
-                <tableViewController id="WXR-Na-iRL" customClass="DetailViewController" customModule="CheckMate_ToDo" customModuleProvider="target" sceneMemberID="viewController">
+                <tableViewController id="WXR-Na-iRL" customClass="ToDosViewController" customModule="CheckMate_ToDo" customModuleProvider="target" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" id="vlG-Mr-iuj">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -136,7 +136,7 @@
                             <outlet property="delegate" destination="WXR-Na-iRL" id="OIg-jx-jaC"/>
                         </connections>
                     </tableView>
-                    <navigationItem key="navigationItem" id="OiK-Mf-55P"/>
+                    <navigationItem key="navigationItem" title="Todos" id="OiK-Mf-55P"/>
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="xqv-7Q-uOd" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
@@ -144,6 +144,6 @@
         </scene>
     </scenes>
     <inferredMetricsTieBreakers>
-        <segue reference="6S0-TO-JiA"/>
+        <segue reference="Tll-UG-LXB"/>
     </inferredMetricsTieBreakers>
 </document>
