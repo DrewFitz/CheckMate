@@ -16,6 +16,7 @@ class DetailViewController: UITableViewController {
 
     var list: CKRecord! {
         didSet {
+            navigationItem.title = list["title"]
             reloadData()
         }
     }
