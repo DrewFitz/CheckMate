@@ -12,39 +12,31 @@ import os.log
 
 class DetailViewController: UITableViewController {
 
-    let container = CKContainer.default()
+    let cloud = ToDoCloud.shared
 
-    var list: CKRecord!
-    var items = [CKRecord]()
-
-    func fetchItems() {
-        guard list != nil else { return }
-
-        let predicate = NSPredicate(format: "list == %@", list.recordID)
-        let query = CKQuery(recordType: "todo", predicate: predicate)
-        let operation = CKQueryOperation(query: query)
-
-        operation.recordFetchedBlock = { record in
-            self.items.append(record)
+    var list: CKRecord! {
+        didSet {
+            reloadData()
         }
-
-        operation.queryCompletionBlock = { cursor, error in
-            if let error = error {
-                os_log(.error, "CKError: %{public}s", error.localizedDescription)
-            } else {
-                DispatchQueue.main.async {
-                    self.tableView.reloadData()
-                }
-            }
-        }
-
-        container.privateCloudDatabase.add(operation)
     }
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    var items = [CKRecord]()
 
-        fetchItems()
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .ToDoCloudDidUpdate, object: cloud)
+    }
+
+    @objc func reloadData() {
+        DispatchQueue.main.async {
+            self.items = self.cloud.todos.filter { (todo) -> Bool in
+                let reference = todo["list"] as! CKRecord.Reference
+                return reference.recordID == self.list.recordID
+            }
+
+            self.tableView.reloadData()
+        }
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
