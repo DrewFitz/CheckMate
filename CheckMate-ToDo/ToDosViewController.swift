@@ -8,15 +8,14 @@
 
 import UIKit
 import CloudKit
-import os.log
 
 class ToDosViewController: UITableViewController {
 
     let cloud = ToDoCloud.shared
 
-    var list: CKRecord! {
+    var list: CKRecord? {
         didSet {
-            navigationItem.title = list["title"]
+            navigationItem.title = list?["title"]
             reloadData()
         }
     }
@@ -30,10 +29,11 @@ class ToDosViewController: UITableViewController {
     }
 
     @objc func reloadData() {
+        guard let list = list else { return }
         DispatchQueue.main.async {
             self.items = self.cloud.todos.filter { (todo) -> Bool in
                 let reference = todo["list"] as! CKRecord.Reference
-                return reference.recordID == self.list.recordID
+                return reference.recordID == list.recordID
             }
 
             self.tableView.reloadData()
