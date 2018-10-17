@@ -31,8 +31,8 @@ class ToDoCloud {
     private(set) var todos = [CKRecord]()
 
     private let container = CKContainer.default()
-    private var zoneTokens = [CKRecordZone.ID: CKServerChangeToken]()
-    private var databaseToken: CKServerChangeToken?
+    private var zoneChangeTokens = [CKRecordZone.ID: CKServerChangeToken]()
+    private var databaseChangeToken: CKServerChangeToken?
     private var todoZoneID: CKRecordZone.ID?
 
     private let group: CKOperationGroup = {
@@ -108,15 +108,13 @@ class ToDoCloud {
 
     private func fetchChangedZones(completion: @escaping ([CKRecordZone.ID]) -> Void) -> CKDatabaseOperation {
         var zones = [CKRecordZone.ID]()
-        let changeOperation = CKFetchDatabaseChangesOperation(previousServerChangeToken: databaseToken)
+        let changeOperation = CKFetchDatabaseChangesOperation(previousServerChangeToken: databaseChangeToken)
 
         changeOperation.changeTokenUpdatedBlock = { token in
-            print("Database token updated: \(token)")
-            self.databaseToken = token
+            self.databaseChangeToken = token
         }
 
         changeOperation.recordZoneWithIDChangedBlock = { zoneID in
-            print("Zone changed: \(zoneID)")
             zones.append(zoneID)
             if zoneID.zoneName == "todos" {
                 self.todoZoneID = zoneID
@@ -124,16 +122,28 @@ class ToDoCloud {
         }
 
         changeOperation.recordZoneWithIDWasPurgedBlock = { zoneID in
-            print("Zone was purged: \(zoneID)")
+            if zoneID.zoneName == "todos" {
+                self.lists = []
+                self.todos = []
+            }
         }
 
         changeOperation.recordZoneWithIDWasDeletedBlock = { zoneID in
-            print("Zone was deleted: \(zoneID)")
+            if zoneID.zoneName == "todos" {
+                self.lists = []
+                self.todos = []
+            }
         }
 
         changeOperation.fetchDatabaseChangesCompletionBlock = { token, moreComing, error in
-            print("Database changes completed: \(String(describing: token)), \(moreComing), \(String(describing: error))")
-            completion(zones)
+            guard error == nil else {
+                os_log(.error, "Fetch database changes error: %{public}s", error!.localizedDescription)
+                return
+            }
+
+            if moreComing == false {
+                completion(zones)
+            }
         }
 
         changeOperation.group = group
@@ -144,7 +154,7 @@ class ToDoCloud {
     private func fetchChanges(in zones: [CKRecordZone.ID]) -> CKDatabaseOperation {
 
         let configurations = zones.map { (zone: CKRecordZone.ID) -> (CKRecordZone.ID, CKFetchRecordZoneChangesOperation.ZoneConfiguration)? in
-            guard let token = zoneTokens[zone] else { return nil }
+            guard let token = zoneChangeTokens[zone] else { return nil }
             return (zone, CKFetchRecordZoneChangesOperation.ZoneConfiguration(previousServerChangeToken: token, resultsLimit: nil, desiredKeys: nil))
         }
 
@@ -154,37 +164,48 @@ class ToDoCloud {
         }
 
         let recordsOperation = CKFetchRecordZoneChangesOperation(recordZoneIDs: zones, configurationsByRecordZoneID: configsByID)
+
         recordsOperation.recordChangedBlock = { record in
-            print("record changed: \(record)")
-            if record.recordType == "list" {
+            switch record.recordType {
+            case "list":
                 self.lists.removeAll(where: { localRecord in
                     record.recordID == localRecord.recordID
                 })
                 self.lists.append(record)
 
-            } else if record.recordType == "todo" {
+            case "todo":
                 self.todos.removeAll(where: { localRecord in
                     record.recordID == localRecord.recordID
                 })
                 self.todos.append(record)
+
+            default:
+                break
             }
         }
 
         recordsOperation.recordWithIDWasDeletedBlock = { id, type in
-            print("record was deleted: \(type), \(id)")
-        }
-
-        recordsOperation.recordZoneFetchCompletionBlock = { id, token, clientTokenData, moreComing, error in
-            self.zoneTokens[id] = token
-            print("Record zone fetch completed: \(id), \(String(describing: token)), \(String(describing: clientTokenData)), \(moreComing), \(String(describing: error))")
-        }
-
-        recordsOperation.fetchRecordZoneChangesCompletionBlock = { error in
-            print("Fetch record zone changes completion: \(String(describing: error))")
+            switch type {
+            case "list":
+                self.lists.removeAll(where: { (record) -> Bool in
+                    record.recordID == id
+                })
+            case "todo":
+                self.todos.removeAll(where: { (record) -> Bool in
+                    record.recordID == id
+                })
+            default:
+                break
+            }
         }
 
         recordsOperation.recordZoneChangeTokensUpdatedBlock = { zoneID, token, clientTokenData in
-            print("Record zone change tokens updated: \(zoneID), \(String(describing: token)), \(String(describing: clientTokenData))")
+            self.zoneChangeTokens[zoneID] = token
+        }
+
+        recordsOperation.fetchRecordZoneChangesCompletionBlock = { error in
+            guard let error = error else { return }
+            os_log(.error, "Fetch Record Zone Changes Error: %{public}s", error.localizedDescription)
         }
 
         recordsOperation.group = group
