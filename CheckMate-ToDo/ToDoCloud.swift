@@ -71,17 +71,8 @@ class ToDoCloud {
         OperationQueue.main.addOperation(next)
     }
 
-    func createToDo(with dictionary: [String: CKRecordValueProtocol]) {
-        guard let todoZoneID = todoZoneID else { return }
-
-        let newTodoID = CKRecord.ID(zoneID: todoZoneID)
-        let newTodo = CKRecord(recordType: "todo", recordID: newTodoID)
-        newTodo["title"] = dictionary["title"]
-        newTodo["note"] = dictionary["note"]
-        newTodo["dateCompleted"] = dictionary["dateCompleted"]
-        newTodo["list"] = dictionary["list"]
-
-        let saveOperation = CKModifyRecordsOperation(recordsToSave: [newTodo], recordIDsToDelete: nil)
+    func save(record: CKRecord) {
+        let saveOperation = CKModifyRecordsOperation(recordsToSave: [record], recordIDsToDelete: nil)
 
         saveOperation.modifyRecordsCompletionBlock = { savedRecords, deletedIDs, error in
             guard let records = savedRecords else {
@@ -92,8 +83,14 @@ class ToDoCloud {
             for record in records {
                 switch record.recordType {
                 case "todo":
+                    self.todos.removeAll(where: { (local) -> Bool in
+                        record.recordID == local.recordID
+                    })
                     self.todos.append(record)
                 case "list":
+                    self.lists.removeAll(where: { (local) -> Bool in
+                        record.recordID == local.recordID
+                    })
                     self.lists.append(record)
                 default:
                     break
@@ -104,6 +101,19 @@ class ToDoCloud {
         }
 
         container.privateCloudDatabase.add(saveOperation)
+    }
+
+    func createToDo(with dictionary: [String: CKRecordValueProtocol]) {
+        guard let todoZoneID = todoZoneID else { return }
+
+        let newTodoID = CKRecord.ID(zoneID: todoZoneID)
+        let newTodo = CKRecord(recordType: "todo", recordID: newTodoID)
+        newTodo["title"] = dictionary["title"]
+        newTodo["note"] = dictionary["note"]
+        newTodo["dateCompleted"] = dictionary["dateCompleted"]
+        newTodo["list"] = dictionary["list"]
+
+        save(record: newTodo)
     }
 
     private func fetchChangedZones(completion: @escaping ([CKRecordZone.ID]) -> Void) -> CKDatabaseOperation {

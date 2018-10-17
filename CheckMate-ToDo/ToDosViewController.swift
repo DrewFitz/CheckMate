@@ -21,6 +21,7 @@ class ToDosViewController: UITableViewController {
     }
 
     var items = [CKRecord]()
+    var editingItem: CKRecord?
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -31,9 +32,22 @@ class ToDosViewController: UITableViewController {
     }
 
     @objc func newItem() {
+        presentEditor()
+    }
+
+    func presentEditor() {
         let nav = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "newTodo") as! UINavigationController
-        let newVC = nav.topViewController as! NewToDoViewController
-        newVC.delegate = self
+        let editVC = nav.topViewController as! EditToDoViewController
+        editVC.delegate = self
+
+        editVC.loadViewIfNeeded()
+        if let item = editingItem {
+            editVC.titleField.text = item["title"]
+            editVC.noteField.text = item["note"]
+            editVC.dateCompletedField.text = String(describing: item["dateCompleted"])
+            editVC.completedSwitch.isOn = item["dateCompleted"] != nil
+        }
+
         present(nav, animated: true, completion: nil)
     }
 
@@ -61,39 +75,56 @@ class ToDosViewController: UITableViewController {
         cell.accessoryType = todo["dateCompleted"] == nil ? .none : .checkmark
         return cell
     }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        editingItem = items[indexPath.row]
+        presentEditor()
+    }
 }
 
-extension ToDosViewController: NewToDoViewControllerDelegate {
-    func done(_ vc: NewToDoViewController) {
+extension ToDosViewController: EditToDoViewControllerDelegate {
+    func done(_ vc: EditToDoViewController) {
         defer { dismiss(animated: true, completion: nil) }
-        guard let list = list else { return }
 
-        var newTodo = [String: CKRecordValueProtocol]()
-        newTodo["title"] = vc.titleField.text
-        newTodo["note"] = vc.noteField.text
-        newTodo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
-        newTodo["list"] = CKRecord.Reference(record: list, action: .deleteSelf)
-        
-        cloud.createToDo(with: newTodo)
+        if let editingToDo = editingItem {
+            editingToDo["title"] = vc.titleField.text
+            editingToDo["note"] = vc.noteField.text
+            editingToDo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
+
+            cloud.save(record: editingToDo)
+            editingItem = nil
+
+        } else {
+            guard let list = list else { return }
+
+            var newTodo = [String: CKRecordValueProtocol]()
+            newTodo["title"] = vc.titleField.text
+            newTodo["note"] = vc.noteField.text
+            newTodo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
+            newTodo["list"] = CKRecord.Reference(record: list, action: .deleteSelf)
+
+            cloud.createToDo(with: newTodo)
+        }
+
     }
 
-    func cancel(_: NewToDoViewController) {
+    func cancel(_: EditToDoViewController) {
         dismiss(animated: true, completion: nil)
     }
 }
 
-protocol NewToDoViewControllerDelegate: class {
-    func done(_:NewToDoViewController)
-    func cancel(_:NewToDoViewController)
+protocol EditToDoViewControllerDelegate: class {
+    func done(_:EditToDoViewController)
+    func cancel(_:EditToDoViewController)
 }
 
-class NewToDoViewController: UIViewController {
+class EditToDoViewController: UIViewController {
     @IBOutlet var titleField: UITextField!
     @IBOutlet var noteField: UITextField!
     @IBOutlet var dateCompletedField: UITextField!
     @IBOutlet var completedSwitch: UISwitch!
 
-    weak var delegate: NewToDoViewControllerDelegate?
+    weak var delegate: EditToDoViewControllerDelegate?
 
     @IBAction func cancelButtonTapped(_ sender: UIBarButtonItem) {
         delegate?.cancel(self)
