@@ -25,7 +25,16 @@ class ToDosViewController: UITableViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
+        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(newItem))
+
         NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .ToDoCloudDidUpdate, object: cloud)
+    }
+
+    @objc func newItem() {
+        let nav = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "newTodo") as! UINavigationController
+        let newVC = nav.topViewController as! NewToDoViewController
+        newVC.delegate = self
+        present(nav, animated: true, completion: nil)
     }
 
     @objc func reloadData() {
@@ -54,3 +63,44 @@ class ToDosViewController: UITableViewController {
     }
 }
 
+extension ToDosViewController: NewToDoViewControllerDelegate {
+    func done(_ vc: NewToDoViewController) {
+        defer { dismiss(animated: true, completion: nil) }
+        guard let list = list else { return }
+
+        var newTodo = [String: CKRecordValueProtocol]()
+        newTodo["title"] = vc.titleField.text
+        newTodo["note"] = vc.noteField.text
+        newTodo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
+        newTodo["list"] = CKRecord.Reference(record: list, action: .deleteSelf)
+        
+        cloud.createToDo(with: newTodo)
+    }
+
+    func cancel(_: NewToDoViewController) {
+        dismiss(animated: true, completion: nil)
+    }
+}
+
+protocol NewToDoViewControllerDelegate: class {
+    func done(_:NewToDoViewController)
+    func cancel(_:NewToDoViewController)
+}
+
+class NewToDoViewController: UIViewController {
+    @IBOutlet var titleField: UITextField!
+    @IBOutlet var noteField: UITextField!
+    @IBOutlet var dateCompletedField: UITextField!
+    @IBOutlet var completedSwitch: UISwitch!
+
+    weak var delegate: NewToDoViewControllerDelegate?
+
+    @IBAction func cancelButtonTapped(_ sender: UIBarButtonItem) {
+        delegate?.cancel(self)
+    }
+
+    @IBAction func doneButtonTapped(_ sender: UIBarButtonItem) {
+        delegate?.done(self)
+    }
+
+}

@@ -33,6 +33,7 @@ class ToDoCloud {
     private let container = CKContainer.default()
     private var zoneTokens = [CKRecordZone.ID: CKServerChangeToken]()
     private var databaseToken: CKServerChangeToken?
+    private var todoZoneID: CKRecordZone.ID?
 
     private let group: CKOperationGroup = {
         let group = CKOperationGroup()
@@ -70,6 +71,41 @@ class ToDoCloud {
         OperationQueue.main.addOperation(next)
     }
 
+    func createToDo(with dictionary: [String: CKRecordValueProtocol]) {
+        guard let todoZoneID = todoZoneID else { return }
+
+        let newTodoID = CKRecord.ID(zoneID: todoZoneID)
+        let newTodo = CKRecord(recordType: "todo", recordID: newTodoID)
+        newTodo["title"] = dictionary["title"]
+        newTodo["note"] = dictionary["note"]
+        newTodo["dateCompleted"] = dictionary["dateCompleted"]
+        newTodo["list"] = dictionary["list"]
+
+        let saveOperation = CKModifyRecordsOperation(recordsToSave: [newTodo], recordIDsToDelete: nil)
+
+        saveOperation.modifyRecordsCompletionBlock = { savedRecords, deletedIDs, error in
+            guard let records = savedRecords else {
+                print("Error saving records: \(String(describing: error))")
+                return
+            }
+
+            for record in records {
+                switch record.recordType {
+                case "todo":
+                    self.todos.append(record)
+                case "list":
+                    self.lists.append(record)
+                default:
+                    break
+                }
+            }
+
+            NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
+        }
+
+        container.privateCloudDatabase.add(saveOperation)
+    }
+
     private func fetchChangedZones(completion: @escaping ([CKRecordZone.ID]) -> Void) -> CKDatabaseOperation {
         var zones = [CKRecordZone.ID]()
         let changeOperation = CKFetchDatabaseChangesOperation(previousServerChangeToken: databaseToken)
@@ -82,6 +118,9 @@ class ToDoCloud {
         changeOperation.recordZoneWithIDChangedBlock = { zoneID in
             print("Zone changed: \(zoneID)")
             zones.append(zoneID)
+            if zoneID.zoneName == "todos" {
+                self.todoZoneID = zoneID
+            }
         }
 
         changeOperation.recordZoneWithIDWasPurgedBlock = { zoneID in
