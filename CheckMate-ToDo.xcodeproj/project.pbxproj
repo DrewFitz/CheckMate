@@ -63,15 +63,12 @@
 		BBA56DBB21751FAE00083938 /* CheckMate-ToDo */ = {
 			isa = PBXGroup;
 			children = (
-				BBA56DD021751FDB00083938 /* CheckMate-ToDo.entitlements */,
+				BBA56DD62176E04E00083938 /* Resources */,
+				BBA56DC221751FAE00083938 /* Main.storyboard */,
 				BBA56DBC21751FAE00083938 /* AppDelegate.swift */,
 				BBA56DBE21751FAE00083938 /* ListsViewController.swift */,
 				BBA56DD4217690EE00083938 /* ToDoCloud.swift */,
 				BBA56DC021751FAE00083938 /* ToDosViewController.swift */,
-				BBA56DC221751FAE00083938 /* Main.storyboard */,
-				BBA56DC521751FB000083938 /* Assets.xcassets */,
-				BBA56DC721751FB000083938 /* LaunchScreen.storyboard */,
-				BBA56DCA21751FB000083938 /* Info.plist */,
 			);
 			path = "CheckMate-ToDo";
 			sourceTree = "<group>";
@@ -82,6 +79,17 @@
 				BBA56DD221751FDD00083938 /* CloudKit.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		BBA56DD62176E04E00083938 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				BBA56DC521751FB000083938 /* Assets.xcassets */,
+				BBA56DC721751FB000083938 /* LaunchScreen.storyboard */,
+				BBA56DCA21751FB000083938 /* Info.plist */,
+				BBA56DD021751FDB00083938 /* CheckMate-ToDo.entitlements */,
+			);
+			name = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
