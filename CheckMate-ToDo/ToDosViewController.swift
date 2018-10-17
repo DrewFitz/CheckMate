@@ -58,7 +58,11 @@ class ToDosViewController: UITableViewController {
             self.items = self.cloud.todos.filter { (todo) -> Bool in
                 let reference = todo["list"] as! CKRecord.Reference
                 return reference.recordID == list.recordID
-            }
+                }.sorted(by: { (lhs, rhs) -> Bool in
+                    let lhsTitle = lhs["title"] as! String?
+                    let rhsTitle = rhs["title"] as! String?
+                    return (lhsTitle ?? "") < (rhsTitle ?? "")
+                })
 
             self.tableView.reloadData()
         }

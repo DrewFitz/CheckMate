@@ -44,7 +44,15 @@ class ListsViewController: UITableViewController {
         present(nav, animated: true, completion: nil)
     }
 
+    var sortedLists = [CKRecord]()
+
     @objc func reloadData() {
+        sortedLists = cloud.lists.sorted { (lhs, rhs) -> Bool in
+            let lhsTitle = lhs["title"] as! String?
+            let rhsTitle = rhs["title"] as! String?
+            return (lhsTitle ?? "") < (rhsTitle ?? "")
+        }
+
         DispatchQueue.main.async {
             self.tableView.reloadData()
         }
@@ -61,7 +69,7 @@ class ListsViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "showDetail" {
             if let indexPath = tableView.indexPathForSelectedRow {
-                let object = cloud.lists[indexPath.row]
+                let object = sortedLists[indexPath.row]
                 let controller = (segue.destination as! UINavigationController).topViewController as! ToDosViewController
                 controller.list = object
                 controller.navigationItem.leftBarButtonItem = splitViewController?.displayModeButtonItem
@@ -73,20 +81,20 @@ class ListsViewController: UITableViewController {
     // MARK: - Table View
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return cloud.lists.count
+        return sortedLists.count
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
 
-        let object = cloud.lists[indexPath.row]
+        let object = sortedLists[indexPath.row]
         cell.textLabel!.text = object["title"]
         return cell
     }
 
     override func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         let editAction = UIContextualAction(style: .normal, title: "Edit") { (action, view, completion) in
-            self.editingRecord = self.cloud.lists[indexPath.row]
+            self.editingRecord = self.sortedLists[indexPath.row]
             self.presentEditor()
             completion(true)
         }
@@ -98,7 +106,7 @@ class ListsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         switch editingStyle {
         case .delete:
-            let listToDelete = cloud.lists[indexPath.row]
+            let listToDelete = sortedLists[indexPath.row]
             cloud.deleteRecord(id: listToDelete.recordID)
         default:
             break
