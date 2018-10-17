@@ -25,6 +25,10 @@ class ToDoCloud {
         let operation = CKModifySubscriptionsOperation(subscriptionsToSave: [privateSubscription], subscriptionIDsToDelete: nil)
 
         container.privateCloudDatabase.add(operation)
+
+        let todoZone = CKRecordZone(zoneName: "todos")
+        let zoneOperation = CKModifyRecordZonesOperation(recordZonesToSave: [todoZone], recordZoneIDsToDelete: nil)
+        container.privateCloudDatabase.add(zoneOperation)
     }
 
     private(set) var lists = [CKRecord]()
