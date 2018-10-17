@@ -84,6 +84,26 @@ class ListsViewController: UITableViewController {
         return cell
     }
 
+    override func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let editAction = UIContextualAction(style: .normal, title: "Edit") { (action, view, completion) in
+            self.editingRecord = self.cloud.lists[indexPath.row]
+            self.presentEditor()
+            completion(true)
+        }
+        let config = UISwipeActionsConfiguration(actions: [editAction])
+
+        return config
+    }
+
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        switch editingStyle {
+        case .delete:
+            let listToDelete = cloud.lists[indexPath.row]
+            cloud.deleteRecord(id: listToDelete.recordID)
+        default:
+            break
+        }
+    }
 }
 
 extension ListsViewController: EditListViewControllerDelegate {
