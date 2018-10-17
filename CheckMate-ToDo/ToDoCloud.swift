@@ -116,6 +116,15 @@ class ToDoCloud {
         save(record: newTodo)
     }
 
+    func createList(title: String) {
+        guard let todoZoneID = todoZoneID else { return }
+        let newListID = CKRecord.ID(zoneID: todoZoneID)
+        let newList = CKRecord(recordType: "list", recordID: newListID)
+        newList["title"] = title
+
+        save(record: newList)
+    }
+
     func deleteRecord(id: CKRecord.ID) {
         let deleteOperation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: [id])
 

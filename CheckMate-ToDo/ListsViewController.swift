@@ -7,25 +7,41 @@
 //
 
 import UIKit
+import CloudKit
 
 class ListsViewController: UITableViewController {
-
-    var detailViewController: ToDosViewController? = nil
 
     var cloud = ToDoCloud.shared
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
 
-        if let split = splitViewController {
-            let controllers = split.viewControllers
-            detailViewController = (controllers[controllers.count-1] as! UINavigationController).topViewController as? ToDosViewController
-        }
+        let addItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addList))
+
+        navigationItem.rightBarButtonItems = [addItem, editButtonItem]
 
         NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .ToDoCloudDidUpdate, object: cloud)
 
         cloud.fetchUpdates()
+    }
+
+    @objc func addList() {
+        presentEditor()
+    }
+
+    var editingRecord: CKRecord?
+
+    func presentEditor() {
+        let nav = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "newList") as! UINavigationController
+
+        let editVC = nav.topViewController as! EditListViewController
+
+        editVC.delegate = self
+
+        editVC.loadViewIfNeeded()
+        editVC.titleField.text = editingRecord?["title"]
+
+        present(nav, animated: true, completion: nil)
     }
 
     @objc func reloadData() {
@@ -70,3 +86,42 @@ class ListsViewController: UITableViewController {
 
 }
 
+extension ListsViewController: EditListViewControllerDelegate {
+    func cancel(_: EditListViewController) {
+        dismiss(animated: true, completion: nil)
+    }
+
+    func done(_ editVC: EditListViewController) {
+        defer {
+            editingRecord = nil
+            dismiss(animated: true, completion: nil)
+        }
+        guard let newTitle = editVC.titleField.text else { return }
+
+        if let record = editingRecord {
+            record["title"] = newTitle
+            cloud.save(record: record)
+        } else {
+            cloud.createList(title: newTitle)
+        }
+    }
+}
+
+protocol EditListViewControllerDelegate: class {
+    func cancel(_: EditListViewController)
+    func done(_: EditListViewController)
+}
+
+class EditListViewController: UIViewController {
+    @IBOutlet var titleField: UITextField!
+
+    weak var delegate: EditListViewControllerDelegate?
+
+    @IBAction func cancelButtonTapped(_ sender: UIBarButtonItem) {
+        delegate?.cancel(self)
+    }
+
+    @IBAction func doneButtonTapped(_ sender: UIBarButtonItem) {
+        delegate?.done(self)
+    }
+}
