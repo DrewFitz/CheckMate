@@ -116,6 +116,30 @@ class ToDoCloud {
         save(record: newTodo)
     }
 
+    func deleteRecord(id: CKRecord.ID) {
+        let deleteOperation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: [id])
+
+        deleteOperation.modifyRecordsCompletionBlock = { savedRecords, deletedIDs, error in
+            guard let deletedIDs = deletedIDs else {
+                print("Error saving records: \(String(describing: error))")
+                return
+            }
+
+            for recordID in deletedIDs {
+                self.todos.removeAll(where: { (local) -> Bool in
+                    recordID == local.recordID
+                })
+                self.lists.removeAll(where: { (local) -> Bool in
+                    recordID == local.recordID
+                })
+            }
+
+            NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
+        }
+
+        container.privateCloudDatabase.add(deleteOperation)
+    }
+
     private func fetchChangedZones(completion: @escaping ([CKRecordZone.ID]) -> Void) -> CKDatabaseOperation {
         var zones = [CKRecordZone.ID]()
         let changeOperation = CKFetchDatabaseChangesOperation(previousServerChangeToken: databaseChangeToken)
@@ -209,13 +233,20 @@ class ToDoCloud {
             }
         }
 
-        recordsOperation.recordZoneChangeTokensUpdatedBlock = { zoneID, token, clientTokenData in
+        recordsOperation.recordZoneFetchCompletionBlock = { zoneID, token, data, moreComing, error in
+            guard error == nil else {
+                os_log(.error, "Fetch Record Zone Error: %{public}s", error!.localizedDescription)
+                return
+            }
             self.zoneChangeTokens[zoneID] = token
         }
 
         recordsOperation.fetchRecordZoneChangesCompletionBlock = { error in
-            guard let error = error else { return }
-            os_log(.error, "Fetch Record Zone Changes Error: %{public}s", error.localizedDescription)
+            guard error == nil else {
+                os_log(.error, "Fetch Record Zone Changes Error: %{public}s", error!.localizedDescription)
+                return
+            }
+            // do nothing
         }
 
         recordsOperation.group = group
