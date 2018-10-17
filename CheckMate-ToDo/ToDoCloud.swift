@@ -10,7 +10,7 @@ import CloudKit
 import os.log
 
 extension Notification.Name {
-    static let ToDoCloudDidUpdate = Notification.Name(rawValue: "ToDoCloudDidUpdate")
+    static let ToDoCloudDidUpdate = Notification.Name("ToDoCloudDidUpdate")
 }
 
 class ToDoCloud {
