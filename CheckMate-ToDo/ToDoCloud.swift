@@ -345,14 +345,12 @@ class ToDoCloud: NSObject {
 
     private func fetchChanges(in zones: [CKRecordZone.ID], location: RecordLocation) -> CKDatabaseOperation {
 
-        let configurations = zones.map { (zone: CKRecordZone.ID) -> (CKRecordZone.ID, CKFetchRecordZoneChangesOperation.ZoneConfiguration)? in
-            guard let token = zoneChangeTokens[zone] else { return nil }
-            return (zone, CKFetchRecordZoneChangesOperation.ZoneConfiguration(previousServerChangeToken: token, resultsLimit: nil, desiredKeys: nil))
-        }
-
         var configsByID = [CKRecordZone.ID: CKFetchRecordZoneChangesOperation.ZoneConfiguration]()
-        for (zone, config) in configurations.compactMap({$0}) {
-            configsByID[zone] = config
+
+        zones.forEach { (zone) in
+            if let token = zoneChangeTokens[zone] {
+                configsByID[zone] = CKFetchRecordZoneChangesOperation.ZoneConfiguration(previousServerChangeToken: token, resultsLimit: nil, desiredKeys: nil)
+            }
         }
 
         let recordsOperation = CKFetchRecordZoneChangesOperation(recordZoneIDs: zones, configurationsByRecordZoneID: configsByID)
