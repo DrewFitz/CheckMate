@@ -20,6 +20,13 @@ class ToDosViewController: UITableViewController {
         }
     }
 
+    let spinnerItem: UIBarButtonItem = {
+        let activity = UIActivityIndicatorView(style: .gray)
+        activity.hidesWhenStopped = false
+        activity.startAnimating()
+        return UIBarButtonItem(customView: activity)
+    }()
+
     var items = [CloudRecord]()
     var editingItem: CloudRecord?
 
@@ -39,7 +46,11 @@ class ToDosViewController: UITableViewController {
     @objc func presentShare(_ sender: UIBarButtonItem) {
         guard let list = list else { return }
 
+        let leftItems = navigationItem.leftBarButtonItems
+        navigationItem.leftBarButtonItems = [spinnerItem]
+
         cloud.shareController(for: list.record) { shareController in
+            self.navigationItem.leftBarButtonItems = leftItems
             guard let shareController = shareController else { return }
             shareController.availablePermissions = [.allowPrivate, .allowReadWrite]
 
