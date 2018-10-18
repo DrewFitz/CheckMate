@@ -130,7 +130,8 @@ class ToDoCloud: NSObject {
 
     private var zoneChangeTokens = [CKRecordZone.ID: CKServerChangeToken]()
     private var databaseChangeTokens = [RecordLocation: CKServerChangeToken]()
-    private var todoZoneIDs = [RecordLocation: CKRecordZone.ID]()
+
+    private var privateToDoZoneID: CKRecordZone.ID?
 
     func fetchAllUpdates() {
         fetchUpdates(in: .privateDatabase)
@@ -220,21 +221,23 @@ class ToDoCloud: NSObject {
     }
 
     func createToDo(with dictionary: [String: CKRecordValueProtocol], in location: RecordLocation) {
-        guard let todoZoneID = todoZoneIDs[location] else { return }
+        let listRef = dictionary["list"] as! CKRecord.Reference
 
-        let newTodoID = CKRecord.ID(zoneID: todoZoneID)
+        let zone = listRef.recordID.zoneID
+        let newTodoID = CKRecord.ID(zoneID: zone)
+
         let newTodo = CKRecord(recordType: "todo", recordID: newTodoID)
         newTodo["title"] = dictionary["title"]
         newTodo["note"] = dictionary["note"]
         newTodo["dateCompleted"] = dictionary["dateCompleted"]
-        newTodo["list"] = dictionary["list"]
+        newTodo["list"] = listRef
         newTodo.parent = dictionary["parent"] as? CKRecord.Reference
 
         save(record: CloudRecord(with: newTodo, location: location))
     }
 
     func createList(title: String) {
-        guard let todoZoneID = todoZoneIDs[.privateDatabase] else { return }
+        guard let todoZoneID = privateToDoZoneID else { return }
         let newListID = CKRecord.ID(zoneID: todoZoneID)
         let newList = CKRecord(recordType: "list", recordID: newListID)
         newList["title"] = title
@@ -291,8 +294,8 @@ class ToDoCloud: NSObject {
 
         changeOperation.recordZoneWithIDChangedBlock = { zoneID in
             zones.append(zoneID)
-            if zoneID.zoneName == "todos" {
-                self.todoZoneIDs[location] = zoneID
+            if zoneID.zoneName == "todos", location == .privateDatabase {
+                self.privateToDoZoneID = zoneID
             }
         }
 
