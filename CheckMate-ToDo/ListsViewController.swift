@@ -88,7 +88,11 @@ class ListsViewController: UITableViewController {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
 
         let list = sortedLists[indexPath.row]
-        cell.textLabel!.text = list.record["title"]
+        cell.textLabel?.text = list.record["title"]
+
+        let listIsShared = list.record.share != nil
+        let youOwnThisList = list.location == .privateDatabase
+        cell.detailTextLabel?.text = youOwnThisList ? (listIsShared ? "sharing" : "" ) : "shared with you"
         return cell
     }
 
