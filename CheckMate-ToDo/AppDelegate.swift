@@ -25,17 +25,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UISplitViewControllerDele
 
         navigationController.topViewController!.navigationItem.leftBarButtonItem = splitViewController.displayModeButtonItem
         splitViewController.delegate = self
+        splitViewController.preferredDisplayMode = .allVisible
 
+        // Registers the app with APS so we can get CloudKit subscription pushes
         application.registerForRemoteNotifications()
 
         return true
     }
 
+    // Received from CloudKit subscription pushes, lets us know we need to fetch new data
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         ToDoCloud.shared.fetchAllUpdates()
         completionHandler(.newData)
     }
 
+    // Let iCloud know that our user has clicked "Accept" on an iCloud share link
     func application(_ application: UIApplication, userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata) {
         let op = CKAcceptSharesOperation(shareMetadatas: [cloudKitShareMetadata])
         op.acceptSharesCompletionBlock = { error in
@@ -45,7 +49,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UISplitViewControllerDele
         CKContainer.default().add(op)
     }
 
-    // MARK: - Split view
+    // MARK: - Split view delegate
 
     func splitViewController(_ splitViewController: UISplitViewController, collapseSecondary secondaryViewController:UIViewController, onto primaryViewController:UIViewController) -> Bool {
         guard let secondaryAsNavController = secondaryViewController as? UINavigationController else { return false }
