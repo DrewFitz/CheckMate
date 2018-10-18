@@ -220,9 +220,7 @@ class ToDoCloud: NSObject {
     }
 
     private func removeRecord(_ recordToRemove: CloudRecord) {
-        records.removeAll { (localRecord) -> Bool in
-            localRecord.record.recordID == recordToRemove.record.recordID
-        }
+        removeRecord(recordToRemove.record.recordID)
     }
 
     private func updateRecord(_ newRecord: CloudRecord) {
