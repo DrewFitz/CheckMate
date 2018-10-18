@@ -11,15 +11,17 @@ import UIKit
 import os.log
 
 extension Notification.Name {
+    /// Posted any time ToDoCloud updates, whether or not there was new data
     static let ToDoCloudDidUpdate = Notification.Name("ToDoCloudDidUpdate")
 }
 
-enum RecordLocation: Hashable {
+/// Enum for specifing where a CloudRecord is stored
+enum RecordLocation: String, Hashable, Codable {
     case privateDatabase
     case sharedDatabase
     case publicDatabase
 
-    func database() -> CKDatabase {
+    var database: CKDatabase {
         switch self {
         case .privateDatabase:
             return CKContainer.default().privateCloudDatabase
@@ -31,6 +33,7 @@ enum RecordLocation: Hashable {
     }
 }
 
+/// Enum denoting the the CKRecord type names
 enum RecordType: String {
     case unknown
 
@@ -43,7 +46,9 @@ enum RecordType: String {
     case users = "Users"
 }
 
-struct CloudRecord {
+/// Basic CKRecord Wrapper that has nicer type accessor and saves database info
+class CloudRecord: NSSecureCoding {
+
     var record: CKRecord
     var type: RecordType
     var location: RecordLocation
@@ -51,47 +56,53 @@ struct CloudRecord {
     init(with record: CKRecord, location: RecordLocation) {
         self.record = record
         self.location = location
-        self.type = RecordType.init(rawValue: record.recordType) ?? .unknown
+        self.type = RecordType(rawValue: record.recordType) ?? .unknown
+    }
+
+    // MARK: - NSSecureCoding
+
+    static var supportsSecureCoding: Bool = true
+
+    func encode(with aCoder: NSCoder) {
+        aCoder.encode(record, forKey: "record")
+        aCoder.encode(type, forKey: "type")
+        aCoder.encode(location, forKey: "location")
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        self.record = aDecoder.decodeObject(forKey: "record") as! CKRecord
+        self.type = aDecoder.decodeObject(forKey: "type") as! RecordType
+        self.location = aDecoder.decodeObject(forKey: "location") as! RecordLocation
     }
 }
 
 class ToDoCloud: NSObject {
 
+    // MARK: Singleton
     static let shared = ToDoCloud()
-    private let container = CKContainer.default()
 
-    private let group: CKOperationGroup = {
-        let group = CKOperationGroup()
-
-        group.expectedSendSize = .kilobytes
-        group.expectedReceiveSize = .kilobytes
-
-        group.name = "Fetch all data"
-        return group
-    }()
-
-    private func databaseSubscription() -> CKModifySubscriptionsOperation {
-        let subscription = CKDatabaseSubscription()
-        let notificationInfo = CKSubscription.NotificationInfo()
-        notificationInfo.shouldSendContentAvailable = true
-        subscription.notificationInfo = notificationInfo
-        return CKModifySubscriptionsOperation(subscriptionsToSave: [subscription], subscriptionIDsToDelete: nil)
-    }
-
-    override init() {
+    override private init() {
         super.init()
 
         // make sure we're subscribed to both databases
-        container.privateCloudDatabase.add(databaseSubscription())
-        container.sharedCloudDatabase.add(databaseSubscription())
+        CKContainer.default().privateCloudDatabase.add(databaseSubscription())
+        CKContainer.default().sharedCloudDatabase.add(databaseSubscription())
 
         // make sure we have a "todos" zone
         let todoZone = CKRecordZone(zoneName: "todos")
         let zoneOperation = CKModifyRecordZonesOperation(recordZonesToSave: [todoZone], recordZoneIDsToDelete: nil)
-        container.privateCloudDatabase.add(zoneOperation)
+        CKContainer.default().privateCloudDatabase.add(zoneOperation)
     }
 
+    // MARK: - Saved CloudKit Records
     private var records = [CloudRecord]()
+
+    // MARK: - CloudKit Sync State Objects
+    private var zoneChangeTokens = [CKRecordZone.ID: CKServerChangeToken]()
+    private var databaseChangeTokens = [RecordLocation: CKServerChangeToken]()
+
+
+    // MARK: Private Data Accessors
 
     private func removeRecord(_ recordIDToRemove: CKRecord.ID) {
         records.removeAll { (localRecord) -> Bool in
@@ -109,6 +120,8 @@ class ToDoCloud: NSObject {
         removeRecord(newRecord)
         records.append(newRecord)
     }
+
+    // MARK: Public Data Accessors
 
     var lists: [CloudRecord] {
         return records.filter({ (record) -> Bool in
@@ -128,42 +141,11 @@ class ToDoCloud: NSObject {
         })
     }
 
-    private var zoneChangeTokens = [CKRecordZone.ID: CKServerChangeToken]()
-    private var databaseChangeTokens = [RecordLocation: CKServerChangeToken]()
-
-    private var privateToDoZoneID: CKRecordZone.ID?
+    // MARK: - Public API Functions
 
     func fetchAllUpdates() {
         fetchUpdates(in: .privateDatabase)
         fetchUpdates(in: .sharedDatabase)
-    }
-
-    func fetchUpdates(in location: RecordLocation) {
-        let database = location.database()
-        var zones = [CKRecordZone.ID]()
-
-        let zonesOp = fetchChangedZones(in: location) { newZones in
-            zones = newZones
-        }
-
-        database.add(zonesOp)
-
-        let next = BlockOperation {
-            guard zones.count != 0 else { return }
-            let changesOp = self.fetchChanges(in: zones, location: location)
-            database.add(changesOp)
-
-            let completionOp = BlockOperation {
-                NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
-            }
-
-            completionOp.addDependency(changesOp)
-            OperationQueue.main.addOperation(completionOp)
-        }
-
-        next.addDependency(zonesOp)
-
-        OperationQueue.main.addOperation(next)
     }
 
     func shareController(for record: CKRecord, completion: @escaping (UICloudSharingController?) -> Void) {
@@ -173,7 +155,7 @@ class ToDoCloud: NSObject {
             }) {
 
             // existing share
-            let shareController = UICloudSharingController(share: share.record as! CKShare, container: container)
+            let shareController = UICloudSharingController(share: share.record as! CKShare, container: CKContainer.default())
 
             shareController.delegate = self
 
@@ -196,10 +178,10 @@ class ToDoCloud: NSObject {
                 NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
             }
 
-            self.container.privateCloudDatabase.add(op)
+            CKContainer.default().privateCloudDatabase.add(op)
 
             let completionOp = BlockOperation {
-                let shareController = UICloudSharingController(share: newShare, container: self.container)
+                let shareController = UICloudSharingController(share: newShare, container: CKContainer.default())
                 shareController.delegate = self
                 completion(shareController)
             }
@@ -226,7 +208,7 @@ class ToDoCloud: NSObject {
             NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
         }
 
-        record.location.database().add(saveOperation)
+        record.location.database.add(saveOperation)
     }
 
     func createToDo(with dictionary: [String: CKRecordValueProtocol], in location: RecordLocation) {
@@ -246,8 +228,7 @@ class ToDoCloud: NSObject {
     }
 
     func createList(title: String) {
-        guard let todoZoneID = privateToDoZoneID else { return }
-        let newListID = CKRecord.ID(zoneID: todoZoneID)
+        let newListID = CKRecord.ID(zoneID: privateToDoZoneID)
         let newList = CKRecord(recordType: "list", recordID: newListID)
         newList["title"] = title
 
@@ -270,7 +251,7 @@ class ToDoCloud: NSObject {
             NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
         }
 
-        record.location.database().add(deleteOperation)
+        record.location.database.add(deleteOperation)
     }
 
     func deleteRecord(_ recordID: CKRecord.ID, in location: RecordLocation) {
@@ -289,8 +270,38 @@ class ToDoCloud: NSObject {
             NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
         }
 
-        location.database().add(deleteOperation)
+        location.database.add(deleteOperation)
 
+    }
+
+    // MARK: - Private Functions For Fetching Changes
+
+    private func fetchUpdates(in location: RecordLocation) {
+        let database = location.database
+        var zones = [CKRecordZone.ID]()
+
+        let zonesOp = fetchChangedZones(in: location) { newZones in
+            zones = newZones
+        }
+
+        database.add(zonesOp)
+
+        let next = BlockOperation {
+            guard zones.count != 0 else { return }
+            let changesOp = self.fetchChanges(in: zones, location: location)
+            database.add(changesOp)
+
+            let completionOp = BlockOperation {
+                NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
+            }
+
+            completionOp.addDependency(changesOp)
+            OperationQueue.main.addOperation(completionOp)
+        }
+
+        next.addDependency(zonesOp)
+
+        OperationQueue.main.addOperation(next)
     }
 
     private func fetchChangedZones(in location: RecordLocation, completion: @escaping ([CKRecordZone.ID]) -> Void) -> CKDatabaseOperation {
@@ -303,19 +314,16 @@ class ToDoCloud: NSObject {
 
         changeOperation.recordZoneWithIDChangedBlock = { zoneID in
             zones.append(zoneID)
-            if zoneID.zoneName == "todos", location == .privateDatabase {
-                self.privateToDoZoneID = zoneID
-            }
         }
 
         changeOperation.recordZoneWithIDWasPurgedBlock = { zoneID in
-            if zoneID.zoneName == "todos" {
+            if zoneID == self.privateToDoZoneID {
                 self.records = []
             }
         }
 
         changeOperation.recordZoneWithIDWasDeletedBlock = { zoneID in
-            if zoneID.zoneName == "todos" {
+            if zoneID == self.privateToDoZoneID {
                 self.records = []
             }
         }
@@ -378,7 +386,31 @@ class ToDoCloud: NSObject {
 
         return recordsOperation
     }
+
+    // MARK: - Private Conveniences
+
+    private let privateToDoZoneID = CKRecordZone(zoneName: "todos").zoneID
+
+    private let group: CKOperationGroup = {
+        let group = CKOperationGroup()
+
+        group.expectedSendSize = .kilobytes
+        group.expectedReceiveSize = .kilobytes
+
+        group.name = "Fetch all data"
+        return group
+    }()
+
+    private func databaseSubscription() -> CKModifySubscriptionsOperation {
+        let subscription = CKDatabaseSubscription()
+        let notificationInfo = CKSubscription.NotificationInfo()
+        notificationInfo.shouldSendContentAvailable = true
+        subscription.notificationInfo = notificationInfo
+        return CKModifySubscriptionsOperation(subscriptionsToSave: [subscription], subscriptionIDsToDelete: nil)
+    }
 }
+
+// MARK: - UICloudSharingControllerDelegate
 
 extension ToDoCloud: UICloudSharingControllerDelegate {
     func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
