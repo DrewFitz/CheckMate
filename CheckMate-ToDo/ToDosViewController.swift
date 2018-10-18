@@ -23,12 +23,15 @@ class ToDosViewController: UITableViewController {
     var items = [CloudRecord]()
     var editingItem: CloudRecord?
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
         let addItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(newItem))
+        navigationItem.rightBarButtonItems = [addItem]
+
         let shareItem = UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(presentShare(_:)))
-        navigationItem.rightBarButtonItems = [addItem, editButtonItem, shareItem]
+        navigationItem.leftItemsSupplementBackButton = true
+        navigationItem.leftBarButtonItems = [shareItem]
 
         NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .ToDoCloudDidUpdate, object: cloud)
     }

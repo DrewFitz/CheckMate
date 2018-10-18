@@ -23,7 +23,7 @@
                 </navigationController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="8fS-aE-onr" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-46" y="-630"/>
+            <point key="canvasLocation" x="-4" y="-630"/>
         </scene>
         <!--Split View Controller-->
         <scene sceneID="Nki-YV-4Qg">
@@ -37,7 +37,7 @@
                 </splitViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="cZU-Oi-B1e" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-799" y="-630"/>
+            <point key="canvasLocation" x="-1206" y="-630"/>
         </scene>
         <!--Lists-->
         <scene sceneID="smW-Zh-WAh">
@@ -103,7 +103,7 @@
                 </navigationController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="SLD-UC-DBI" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-45" y="129"/>
+            <point key="canvasLocation" x="-4" y="222"/>
         </scene>
         <!--Todos-->
         <scene sceneID="gsc-SY-lbF">
@@ -150,7 +150,7 @@
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="xqv-7Q-uOd" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="708" y="128"/>
+            <point key="canvasLocation" x="716" y="222"/>
         </scene>
         <!--Navigation Controller-->
         <scene sceneID="i1a-aM-w42">
@@ -166,7 +166,7 @@
                 </navigationController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="s0w-jj-RVp" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1766" y="90"/>
+            <point key="canvasLocation" x="1430" y="222"/>
         </scene>
         <!--New Todo-->
         <scene sceneID="Pml-45-qwt">
@@ -177,49 +177,53 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="36" translatesAutoresizingMaskIntoConstraints="NO" id="cO4-wQ-1Bz">
-                                <rect key="frame" x="87.5" y="124" width="200" height="229"/>
+                                <rect key="frame" x="32" y="124" width="311" height="269"/>
                                 <subviews>
-                                    <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Title" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="rhN-lH-Ign">
-                                        <rect key="frame" x="0.0" y="0.0" width="200" height="30"/>
+                                    <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Title" textAlignment="natural" adjustsFontForContentSizeCategory="YES" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="rhN-lH-Ign">
+                                        <rect key="frame" x="0.0" y="0.0" width="311" height="50"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="50" id="KHG-i3-6GC"/>
+                                        </constraints>
                                         <nil key="textColor"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
-                                        <textInputTraits key="textInputTraits"/>
+                                        <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
+                                        <textInputTraits key="textInputTraits" autocapitalizationType="words"/>
                                     </textField>
-                                    <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Note" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="u53-xq-tPq">
-                                        <rect key="frame" x="0.0" y="66" width="200" height="30"/>
+                                    <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Note" textAlignment="natural" adjustsFontForContentSizeCategory="YES" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="u53-xq-tPq">
+                                        <rect key="frame" x="0.0" y="86" width="311" height="50"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="50" id="14J-N0-mft"/>
+                                        </constraints>
                                         <nil key="textColor"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
-                                        <textInputTraits key="textInputTraits"/>
+                                        <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
+                                        <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
                                     </textField>
                                     <textField opaque="NO" contentMode="scaleToFill" enabled="NO" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Date completed" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="4iP-sp-NZ3">
-                                        <rect key="frame" x="0.0" y="132" width="200" height="30"/>
+                                        <rect key="frame" x="0.0" y="172" width="311" height="30"/>
                                         <nil key="textColor"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                         <textInputTraits key="textInputTraits"/>
                                     </textField>
                                     <stackView opaque="NO" contentMode="scaleToFill" spacing="83" translatesAutoresizingMaskIntoConstraints="NO" id="siV-oO-ULc">
-                                        <rect key="frame" x="0.0" y="198" width="200" height="31"/>
+                                        <rect key="frame" x="0.0" y="238" width="311" height="31"/>
                                         <subviews>
                                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Done?" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Ync-RU-YuI">
-                                                <rect key="frame" x="0.0" y="0.0" width="68" height="31"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="179" height="31"/>
                                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                 <nil key="textColor"/>
                                                 <nil key="highlightedColor"/>
                                             </label>
                                             <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="TQJ-01-trr">
-                                                <rect key="frame" x="151" y="0.0" width="51" height="31"/>
+                                                <rect key="frame" x="262" y="0.0" width="51" height="31"/>
                                             </switch>
                                         </subviews>
                                     </stackView>
                                 </subviews>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="200" id="CQT-Uc-Z3s"/>
-                                </constraints>
                             </stackView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="cO4-wQ-1Bz" firstAttribute="centerX" secondItem="wRZ-Py-oSg" secondAttribute="centerX" id="8AP-3t-Xn8"/>
+                            <constraint firstItem="cO4-wQ-1Bz" firstAttribute="width" secondItem="TDd-fK-9u1" secondAttribute="width" constant="-64" id="gf8-p7-mVK"/>
                             <constraint firstItem="cO4-wQ-1Bz" firstAttribute="top" secondItem="TDd-fK-9u1" secondAttribute="top" constant="60" id="zpY-s6-ZRX"/>
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="TDd-fK-9u1"/>
@@ -245,7 +249,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="L3f-su-ZZv" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="2454" y="90"/>
+            <point key="canvasLocation" x="2116" y="222"/>
         </scene>
         <!--Navigation Controller-->
         <scene sceneID="QNA-tb-dVp">
@@ -261,7 +265,7 @@
                 </navigationController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="XqT-or-4FV" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1767" y="-593"/>
+            <point key="canvasLocation" x="1422" y="-630"/>
         </scene>
         <!--New List-->
         <scene sceneID="pfg-cD-Zyn">
@@ -272,23 +276,24 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="36" translatesAutoresizingMaskIntoConstraints="NO" id="JED-CO-TZv">
-                                <rect key="frame" x="87.5" y="124" width="200" height="30"/>
+                                <rect key="frame" x="32" y="124" width="311" height="50"/>
                                 <subviews>
-                                    <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Title" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="O7O-eE-ZvK">
-                                        <rect key="frame" x="0.0" y="0.0" width="200" height="30"/>
+                                    <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Title" textAlignment="natural" adjustsFontForContentSizeCategory="YES" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="O7O-eE-ZvK">
+                                        <rect key="frame" x="0.0" y="0.0" width="311" height="50"/>
                                         <nil key="textColor"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
-                                        <textInputTraits key="textInputTraits"/>
+                                        <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
+                                        <textInputTraits key="textInputTraits" autocapitalizationType="words"/>
                                     </textField>
                                 </subviews>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="200" id="pPp-hi-Pe6"/>
+                                    <constraint firstAttribute="height" constant="50" id="H60-xG-SkZ"/>
                                 </constraints>
                             </stackView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="JED-CO-TZv" firstAttribute="centerX" secondItem="dlF-G7-G6F" secondAttribute="centerX" id="4GS-Vh-Lpt"/>
+                            <constraint firstItem="JED-CO-TZv" firstAttribute="width" secondItem="npE-Bn-nMF" secondAttribute="width" constant="-64" id="WO0-dm-vdJ"/>
                             <constraint firstItem="JED-CO-TZv" firstAttribute="top" secondItem="npE-Bn-nMF" secondAttribute="top" constant="60" id="gDf-PF-7TZ"/>
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="npE-Bn-nMF"/>
@@ -311,10 +316,10 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="5jm-zW-17l" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="2455" y="-593"/>
+            <point key="canvasLocation" x="2135" y="-630"/>
         </scene>
     </scenes>
     <inferredMetricsTieBreakers>
-        <segue reference="6S0-TO-JiA"/>
+        <segue reference="Tll-UG-LXB"/>
     </inferredMetricsTieBreakers>
 </document>

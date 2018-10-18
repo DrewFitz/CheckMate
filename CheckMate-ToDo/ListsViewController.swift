@@ -18,7 +18,7 @@ class ListsViewController: UITableViewController {
 
         let addItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addList))
 
-        navigationItem.rightBarButtonItems = [addItem, editButtonItem]
+        navigationItem.rightBarButtonItems = [addItem]
 
         NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .ToDoCloudDidUpdate, object: cloud)
 
