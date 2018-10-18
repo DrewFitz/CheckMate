@@ -182,6 +182,8 @@ class ToDoCloud: NSObject {
             shareController = UICloudSharingController(preparationHandler: { (controller, handler) in
                 let newShare = CKShare(rootRecord: record)
 
+                newShare[CKShare.SystemFieldKey.thumbnailImageData] = UIImage(named: "ShareIcon")!.pngData()
+
                 let op = CKModifyRecordsOperation(recordsToSave: [newShare, record], recordIDsToDelete: nil)
 
                 op.modifyRecordsCompletionBlock = { saved, _, error in
