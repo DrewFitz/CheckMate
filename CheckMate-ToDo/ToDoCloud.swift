@@ -192,6 +192,8 @@ class ToDoCloud: NSObject {
                 saved?.forEach({ (record) in
                     self.updateRecord(CloudRecord(with: record, location: .privateDatabase))
                 })
+
+                NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
             }
 
             self.container.privateCloudDatabase.add(op)

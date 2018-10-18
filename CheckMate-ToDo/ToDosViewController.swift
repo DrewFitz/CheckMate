@@ -57,6 +57,7 @@ class ToDosViewController: UITableViewController {
             DispatchQueue.main.async {
                 shareController.popoverPresentationController?.barButtonItem = sender
 
+                guard self.view.window != nil else { return }
                 self.present(shareController, animated: true, completion: nil)
             }
 
