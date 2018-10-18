@@ -127,7 +127,7 @@ extension ListsViewController: EditListViewControllerDelegate {
             editingRecord = nil
             dismiss(animated: true, completion: nil)
         }
-        guard let newTitle = editVC.titleField.text else { return }
+        guard let newTitle = editVC.titleField.text, newTitle.isEmpty == false else { return }
 
         if let record = editingRecord {
             record.record["title"] = newTitle
