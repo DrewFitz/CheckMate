@@ -211,20 +211,19 @@ class ToDoCloud: NSObject {
         record.location.database.add(saveOperation)
     }
 
-    func createToDo(with dictionary: [String: CKRecordValueProtocol], in location: RecordLocation) {
-        let listRef = dictionary["list"] as! CKRecord.Reference
+    func createToDo(with dictionary: [String: Any], in list: CloudRecord) {
+        let zone = list.record.recordID.zoneID
 
-        let zone = listRef.recordID.zoneID
         let newTodoID = CKRecord.ID(zoneID: zone)
-
         let newTodo = CKRecord(recordType: "todo", recordID: newTodoID)
-        newTodo["title"] = dictionary["title"]
-        newTodo["note"] = dictionary["note"]
-        newTodo["dateCompleted"] = dictionary["dateCompleted"]
-        newTodo["list"] = listRef
-        newTodo.parent = dictionary["parent"] as? CKRecord.Reference
 
-        save(record: CloudRecord(with: newTodo, location: location))
+        newTodo["title"] = dictionary["title"] as! String
+        newTodo["note"] = dictionary["note"] as! String
+        newTodo["dateCompleted"] = dictionary["dateCompleted"] as! Date?
+        newTodo["list"] = CKRecord.Reference(record: list.record, action: .deleteSelf)
+        newTodo.parent = CKRecord.Reference(record: list.record, action: .none)
+
+        save(record: CloudRecord(with: newTodo, location: list.location))
     }
 
     func createList(title: String) {

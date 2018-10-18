@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import CloudKit
 
 class ToDosViewController: UITableViewController {
 
@@ -95,13 +94,14 @@ class ToDosViewController: UITableViewController {
         guard let list = list else { return }
         DispatchQueue.main.async {
             self.items = self.cloud.todos.filter { (todo) -> Bool in
-                let reference = todo.record["list"] as! CKRecord.Reference
-                return reference.recordID == list.record.recordID
-                }.sorted(by: { (lhs, rhs) -> Bool in
-                    let lhsTitle = lhs.record["title"] as! String?
-                    let rhsTitle = rhs.record["title"] as! String?
-                    return (lhsTitle ?? "") < (rhsTitle ?? "")
-                })
+
+                return todo.record.parent?.recordID == list.record.recordID
+
+            }.sorted(by: { (lhs, rhs) -> Bool in
+                let lhsTitle = lhs.record["title"] as! String?
+                let rhsTitle = rhs.record["title"] as! String?
+                return (lhsTitle ?? "") < (rhsTitle ?? "")
+            })
 
             self.tableView.reloadData()
         }
@@ -175,13 +175,11 @@ extension ToDosViewController: EditToDoViewControllerDelegate {
         } else {
             guard let list = list else { return }
 
-            var newTodo = [String: CKRecordValueProtocol]()
+            var newTodo = [String: Any]()
             newTodo["title"] = vc.titleField.text
             newTodo["note"] = vc.noteField.text
             newTodo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
-            newTodo["list"] = CKRecord.Reference(record: list.record, action: .deleteSelf)
-            newTodo["parent"] = CKRecord.Reference(record: list.record, action: .none)
-            cloud.createToDo(with: newTodo, in: list.location)
+            cloud.createToDo(with: newTodo, in: list)
         }
 
     }
