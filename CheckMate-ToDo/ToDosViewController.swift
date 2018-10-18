@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import os.log
 
 class ToDosViewController: UITableViewController {
 
@@ -18,13 +19,6 @@ class ToDosViewController: UITableViewController {
             reloadData()
         }
     }
-
-    let spinnerItem: UIBarButtonItem = {
-        let activity = UIActivityIndicatorView(style: .gray)
-        activity.hidesWhenStopped = false
-        activity.startAnimating()
-        return UIBarButtonItem(customView: activity)
-    }()
 
     var items = [CloudRecord]()
     var editingItem: CloudRecord?
@@ -45,22 +39,13 @@ class ToDosViewController: UITableViewController {
     @objc func presentShare(_ sender: UIBarButtonItem) {
         guard let list = list else { return }
 
-        let leftItems = navigationItem.leftBarButtonItems
-        navigationItem.leftBarButtonItems = [spinnerItem]
+        let shareController = cloud.shareController(for: list.record)
 
-        cloud.shareController(for: list.record) { shareController in
-            self.navigationItem.leftBarButtonItems = leftItems
-            guard let shareController = shareController else { return }
-            shareController.availablePermissions = [.allowPrivate, .allowReadWrite]
+        shareController.delegate = self
+        shareController.availablePermissions = [.allowPrivate, .allowReadWrite]
+        shareController.popoverPresentationController?.barButtonItem = sender
 
-            DispatchQueue.main.async {
-                shareController.popoverPresentationController?.barButtonItem = sender
-
-                guard self.view.window != nil else { return }
-                self.present(shareController, animated: true, completion: nil)
-            }
-
-        }
+        self.present(shareController, animated: true, completion: nil)
     }
 
     @objc func newItem() {
@@ -220,4 +205,25 @@ class EditToDoViewController: UIViewController {
         delegate?.done(self)
     }
 
+}
+
+// MARK: - UICloudSharingControllerDelegate
+
+extension ToDosViewController: UICloudSharingControllerDelegate {
+    func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
+        os_log(.error, "Faled to save share with error: %{public}s", error.localizedDescription)
+    }
+
+    func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
+        guard let share = csc.share else { return }
+        cloud.deleteRecord(share.recordID, in: .privateDatabase)
+    }
+
+    func itemTitle(for csc: UICloudSharingController) -> String? {
+        return list?.record["title"] ?? "List"
+    }
+
+    func itemThumbnailData(for csc: UICloudSharingController) -> Data? {
+        return UIImage(named: "ShareIcon")!.pngData()
+    }
 }

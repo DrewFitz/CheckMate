@@ -255,48 +255,42 @@ class ToDoCloud: NSObject {
         fetchUpdates(in: .sharedDatabase)
     }
 
-    func shareController(for record: CKRecord, completion: @escaping (UICloudSharingController?) -> Void) {
+    func shareController(for record: CKRecord) -> UICloudSharingController {
         if let shareReference = record.share,
             let share = shares.first(where: { (share) -> Bool in
                 share.record.recordID == shareReference.recordID
             }) {
 
             // existing share
-            let shareController = UICloudSharingController(share: share.record as! CKShare, container: CKContainer.default())
+            return UICloudSharingController(share: share.record as! CKShare, container: CKContainer.default())
 
-            shareController.delegate = self
-
-            completion(shareController)
         } else {
 
-            // new share
-            let newShare = CKShare(rootRecord: record)
+            let shareController = UICloudSharingController { (controller, completion) in
+                // new share
+                let newShare = CKShare(rootRecord: record)
 
-            newShare[CKShare.SystemFieldKey.thumbnailImageData] = UIImage(named: "ShareIcon")!.pngData()
-            newShare[CKShare.SystemFieldKey.title] = record["title"]
+                newShare[CKShare.SystemFieldKey.thumbnailImageData] = UIImage(named: "ShareIcon")!.pngData()
+                newShare[CKShare.SystemFieldKey.title] = record["title"]
 
-            let op = CKModifyRecordsOperation(recordsToSave: [newShare, record], recordIDsToDelete: nil)
+                let op = CKModifyRecordsOperation(recordsToSave: [newShare, record], recordIDsToDelete: nil)
 
-            op.modifyRecordsCompletionBlock = { saved, _, error in
-                saved?.forEach({ (record) in
-                    self.updateRecord(CloudRecord(with: record, location: .privateDatabase))
-                })
+                op.modifyRecordsCompletionBlock = { saved, _, error in
+                    saved?.forEach({ (record) in
+                        self.updateRecord(CloudRecord(with: record, location: .privateDatabase))
+                    })
 
-                NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
+                    completion(newShare, CKContainer.default(), error)
+
+                    NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
+                }
+
+                CKContainer.default().privateCloudDatabase.add(op)
+
             }
 
-            CKContainer.default().privateCloudDatabase.add(op)
-
-            let completionOp = BlockOperation {
-                let shareController = UICloudSharingController(share: newShare, container: CKContainer.default())
-                shareController.delegate = self
-                completion(shareController)
-            }
-            completionOp.addDependency(op)
-
-            OperationQueue.main.addOperation(completionOp)
+            return shareController
         }
-
     }
 
     func save(record: CloudRecord) {
@@ -365,7 +359,7 @@ class ToDoCloud: NSObject {
 
         deleteOperation.modifyRecordsCompletionBlock = { savedRecords, deletedIDs, error in
             guard let deletedIDs = deletedIDs else {
-                print("Error saving records: \(String(describing: error))")
+                print("Error deleting records: \(String(describing: error))")
                 return
             }
 
@@ -511,22 +505,5 @@ class ToDoCloud: NSObject {
         notificationInfo.shouldSendContentAvailable = true
         subscription.notificationInfo = notificationInfo
         return CKModifySubscriptionsOperation(subscriptionsToSave: [subscription], subscriptionIDsToDelete: nil)
-    }
-}
-
-// MARK: - UICloudSharingControllerDelegate
-
-extension ToDoCloud: UICloudSharingControllerDelegate {
-    func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
-        os_log(.error, "Faled to save share with error: %{public}s", error.localizedDescription)
-    }
-
-    func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
-        guard let share = csc.share else { return }
-        deleteRecord(share.recordID, in: .privateDatabase)
-    }
-
-    func itemTitle(for csc: UICloudSharingController) -> String? {
-        return "Item"
     }
 }
