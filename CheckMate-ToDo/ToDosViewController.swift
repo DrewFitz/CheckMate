@@ -39,13 +39,17 @@ class ToDosViewController: UITableViewController {
     @objc func presentShare(_ sender: UIBarButtonItem) {
         guard let list = list else { return }
 
-        let shareController = cloud.shareController(for: list.record)
+        cloud.shareController(for: list.record) { shareController in
+            guard let shareController = shareController else { return }
+            shareController.availablePermissions = [.allowPrivate, .allowReadWrite]
 
-        shareController.availablePermissions = [.allowPrivate, .allowReadWrite]
+            DispatchQueue.main.async {
+                shareController.popoverPresentationController?.barButtonItem = sender
 
-        shareController.popoverPresentationController?.barButtonItem = sender
+                self.present(shareController, animated: true, completion: nil)
+            }
 
-        present(shareController, animated: true, completion: nil)
+        }
     }
 
     @objc func newItem() {

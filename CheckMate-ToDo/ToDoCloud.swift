@@ -166,41 +166,46 @@ class ToDoCloud: NSObject {
         OperationQueue.main.addOperation(next)
     }
 
-    func shareController(for record: CKRecord) -> UICloudSharingController {
-        let shareController: UICloudSharingController
-
+    func shareController(for record: CKRecord, completion: @escaping (UICloudSharingController?) -> Void) {
         if let shareReference = record.share,
             let share = shares.first(where: { (share) -> Bool in
                 share.record.recordID == shareReference.recordID
             }) {
 
             // existing share
-            shareController = UICloudSharingController(share: share.record as! CKShare, container: container)
+            let shareController = UICloudSharingController(share: share.record as! CKShare, container: container)
+
+            shareController.delegate = self
+
+            completion(shareController)
         } else {
 
             // new share
-            shareController = UICloudSharingController(preparationHandler: { (controller, handler) in
-                let newShare = CKShare(rootRecord: record)
+            let newShare = CKShare(rootRecord: record)
 
-                newShare[CKShare.SystemFieldKey.thumbnailImageData] = UIImage(named: "ShareIcon")!.pngData()
+            newShare[CKShare.SystemFieldKey.thumbnailImageData] = UIImage(named: "ShareIcon")!.pngData()
+            newShare[CKShare.SystemFieldKey.title] = record["title"]
 
-                let op = CKModifyRecordsOperation(recordsToSave: [newShare, record], recordIDsToDelete: nil)
+            let op = CKModifyRecordsOperation(recordsToSave: [newShare, record], recordIDsToDelete: nil)
 
-                op.modifyRecordsCompletionBlock = { saved, _, error in
-                    saved?.forEach({ (record) in
-                        self.updateRecord(CloudRecord(with: record, location: .privateDatabase))
-                    })
+            op.modifyRecordsCompletionBlock = { saved, _, error in
+                saved?.forEach({ (record) in
+                    self.updateRecord(CloudRecord(with: record, location: .privateDatabase))
+                })
+            }
 
-                    handler(newShare, self.container, error)
-                }
+            self.container.privateCloudDatabase.add(op)
 
-                self.container.privateCloudDatabase.add(op)
-            })
+            let completionOp = BlockOperation {
+                let shareController = UICloudSharingController(share: newShare, container: self.container)
+                shareController.delegate = self
+                completion(shareController)
+            }
+            completionOp.addDependency(op)
+
+            OperationQueue.main.addOperation(completionOp)
         }
 
-        shareController.delegate = self
-
-        return shareController
     }
 
     func save(record: CloudRecord) {
