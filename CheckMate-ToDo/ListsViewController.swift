@@ -22,14 +22,14 @@ class ListsViewController: UITableViewController {
 
         NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .ToDoCloudDidUpdate, object: cloud)
 
-        cloud.fetchUpdates()
+        cloud.fetchAllUpdates()
     }
 
     @objc func addList() {
         presentEditor()
     }
 
-    var editingRecord: CKRecord?
+    var editingRecord: CloudRecord?
 
     func presentEditor() {
         let nav = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "newList") as! UINavigationController
@@ -39,17 +39,17 @@ class ListsViewController: UITableViewController {
         editVC.delegate = self
 
         editVC.loadViewIfNeeded()
-        editVC.titleField.text = editingRecord?["title"]
+        editVC.titleField.text = editingRecord?.record["title"]
 
         present(nav, animated: true, completion: nil)
     }
 
-    var sortedLists = [CKRecord]()
+    var sortedLists = [CloudRecord]()
 
     @objc func reloadData() {
         sortedLists = cloud.lists.sorted { (lhs, rhs) -> Bool in
-            let lhsTitle = lhs["title"] as! String?
-            let rhsTitle = rhs["title"] as! String?
+            let lhsTitle = lhs.record["title"] as! String?
+            let rhsTitle = rhs.record["title"] as! String?
             return (lhsTitle ?? "") < (rhsTitle ?? "")
         }
 
@@ -69,9 +69,9 @@ class ListsViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "showDetail" {
             if let indexPath = tableView.indexPathForSelectedRow {
-                let object = sortedLists[indexPath.row]
+                let list = sortedLists[indexPath.row]
                 let controller = (segue.destination as! UINavigationController).topViewController as! ToDosViewController
-                controller.list = object
+                controller.list = list
                 controller.navigationItem.leftBarButtonItem = splitViewController?.displayModeButtonItem
                 controller.navigationItem.leftItemsSupplementBackButton = true
             }
@@ -87,8 +87,8 @@ class ListsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
 
-        let object = sortedLists[indexPath.row]
-        cell.textLabel!.text = object["title"]
+        let list = sortedLists[indexPath.row]
+        cell.textLabel!.text = list.record["title"]
         return cell
     }
 
@@ -107,7 +107,7 @@ class ListsViewController: UITableViewController {
         switch editingStyle {
         case .delete:
             let listToDelete = sortedLists[indexPath.row]
-            cloud.deleteRecord(id: listToDelete.recordID)
+            cloud.deleteRecord(listToDelete)
         default:
             break
         }
@@ -127,7 +127,7 @@ extension ListsViewController: EditListViewControllerDelegate {
         guard let newTitle = editVC.titleField.text else { return }
 
         if let record = editingRecord {
-            record["title"] = newTitle
+            record.record["title"] = newTitle
             cloud.save(record: record)
         } else {
             cloud.createList(title: newTitle)

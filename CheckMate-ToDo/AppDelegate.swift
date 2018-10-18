@@ -32,20 +32,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UISplitViewControllerDele
     }
 
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        let cloudNotification = CKNotification(fromRemoteNotificationDictionary: userInfo)
-
-        if cloudNotification.containerIdentifier != nil {
-            ToDoCloud.shared.fetchUpdates()
-            completionHandler(.newData)
-        } else {
-            completionHandler(.noData)
-        }
+        ToDoCloud.shared.fetchAllUpdates()
+        completionHandler(.newData)
     }
 
     func application(_ application: UIApplication, userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata) {
         let op = CKAcceptSharesOperation(shareMetadatas: [cloudKitShareMetadata])
         op.acceptSharesCompletionBlock = { error in
-            ToDoCloud.shared.fetchUpdates()
+            ToDoCloud.shared.fetchAllUpdates()
         }
 
         CKContainer.default().add(op)

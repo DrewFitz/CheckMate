@@ -13,15 +13,15 @@ class ToDosViewController: UITableViewController {
 
     let cloud = ToDoCloud.shared
 
-    var list: CKRecord? {
+    var list: CloudRecord? {
         didSet {
-            navigationItem.title = list?["title"]
+            navigationItem.title = list?.record["title"]
             reloadData()
         }
     }
 
-    var items = [CKRecord]()
-    var editingItem: CKRecord?
+    var items = [CloudRecord]()
+    var editingItem: CloudRecord?
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -36,7 +36,7 @@ class ToDosViewController: UITableViewController {
     @objc func presentShare(_ sender: UIBarButtonItem) {
         guard let list = list else { return }
 
-        let shareController = cloud.shareController(for: list)
+        let shareController = cloud.shareController(for: list.record)
 
         shareController.availablePermissions = [.allowPrivate, .allowReadWrite]
 
@@ -56,9 +56,9 @@ class ToDosViewController: UITableViewController {
 
         editVC.loadViewIfNeeded()
         if let item = editingItem {
-            editVC.titleField.text = item["title"]
-            editVC.noteField.text = item["note"]
-            if let date = item["dateCompleted"] as? Date {
+            editVC.titleField.text = item.record["title"]
+            editVC.noteField.text = item.record["note"]
+            if let date = item.record["dateCompleted"] as? Date {
                 let formatter = DateFormatter()
                 formatter.dateStyle = .short
                 formatter.timeStyle = .short
@@ -76,11 +76,11 @@ class ToDosViewController: UITableViewController {
         guard let list = list else { return }
         DispatchQueue.main.async {
             self.items = self.cloud.todos.filter { (todo) -> Bool in
-                let reference = todo["list"] as! CKRecord.Reference
-                return reference.recordID == list.recordID
+                let reference = todo.record["list"] as! CKRecord.Reference
+                return reference.recordID == list.record.recordID
                 }.sorted(by: { (lhs, rhs) -> Bool in
-                    let lhsTitle = lhs["title"] as! String?
-                    let rhsTitle = rhs["title"] as! String?
+                    let lhsTitle = lhs.record["title"] as! String?
+                    let rhsTitle = rhs.record["title"] as! String?
                     return (lhsTitle ?? "") < (rhsTitle ?? "")
                 })
 
@@ -95,9 +95,9 @@ class ToDosViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "todo", for: indexPath)
         let todo = items[indexPath.row]
-        cell.textLabel?.text = todo["title"] ?? "No title"
-        cell.detailTextLabel?.text = todo["note"]
-        cell.accessoryType = todo["dateCompleted"] == nil ? .none : .checkmark
+        cell.textLabel?.text = todo.record["title"] ?? "No title"
+        cell.detailTextLabel?.text = todo.record["note"]
+        cell.accessoryType = todo.record["dateCompleted"] == nil ? .none : .checkmark
         return cell
     }
 
@@ -114,7 +114,7 @@ class ToDosViewController: UITableViewController {
         switch editingStyle {
         case .delete:
             let recordToDelete = items.remove(at: indexPath.row)
-            cloud.deleteRecord(id: recordToDelete.recordID)
+            cloud.deleteRecord(recordToDelete)
         default:
             break
         }
@@ -126,17 +126,17 @@ extension ToDosViewController: EditToDoViewControllerDelegate {
         defer { dismiss(animated: true, completion: nil) }
 
         if let editingToDo = editingItem {
-            editingToDo["title"] = vc.titleField.text
-            editingToDo["note"] = vc.noteField.text
+            editingToDo.record["title"] = vc.titleField.text
+            editingToDo.record["note"] = vc.noteField.text
 
             // If done and no date set, set date to now.
             // Otherwise unset date.
             if vc.completedSwitch.isOn == true,
-                editingToDo["dateCompleted"] == nil {
+                editingToDo.record["dateCompleted"] == nil {
 
-                editingToDo["dateCompleted"] = Date()
+                editingToDo.record["dateCompleted"] = Date()
             } else {
-                editingToDo["dateCompleted"] = nil
+                editingToDo.record["dateCompleted"] = nil
             }
 
             cloud.save(record: editingToDo)
@@ -149,9 +149,9 @@ extension ToDosViewController: EditToDoViewControllerDelegate {
             newTodo["title"] = vc.titleField.text
             newTodo["note"] = vc.noteField.text
             newTodo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
-            newTodo["list"] = CKRecord.Reference(record: list, action: .deleteSelf)
-            newTodo["parent"] = CKRecord.Reference(record: list, action: .none)
-            cloud.createToDo(with: newTodo)
+            newTodo["list"] = CKRecord.Reference(record: list.record, action: .deleteSelf)
+            newTodo["parent"] = CKRecord.Reference(record: list.record, action: .none)
+            cloud.createToDo(with: newTodo, in: list.location)
         }
 
     }

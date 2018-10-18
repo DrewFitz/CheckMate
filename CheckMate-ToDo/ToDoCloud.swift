@@ -14,6 +14,47 @@ extension Notification.Name {
     static let ToDoCloudDidUpdate = Notification.Name("ToDoCloudDidUpdate")
 }
 
+enum RecordLocation: Hashable {
+    case privateDatabase
+    case sharedDatabase
+    case publicDatabase
+
+    func database() -> CKDatabase {
+        switch self {
+        case .privateDatabase:
+            return CKContainer.default().privateCloudDatabase
+        case .sharedDatabase:
+            return CKContainer.default().sharedCloudDatabase
+        case .publicDatabase:
+            return CKContainer.default().publicCloudDatabase
+        }
+    }
+}
+
+enum RecordType: String {
+    case unknown
+
+    case todo
+    case list
+    case brag
+
+    // system default types
+    case share = "cloudkit.share"
+    case users = "Users"
+}
+
+struct CloudRecord {
+    var record: CKRecord
+    var type: RecordType
+    var location: RecordLocation
+
+    init(with record: CKRecord, location: RecordLocation) {
+        self.record = record
+        self.location = location
+        self.type = RecordType.init(rawValue: record.recordType) ?? .unknown
+    }
+}
+
 class ToDoCloud: NSObject {
 
     static let shared = ToDoCloud()
@@ -29,42 +70,87 @@ class ToDoCloud: NSObject {
         return group
     }()
 
+    private func databaseSubscription() -> CKModifySubscriptionsOperation {
+        let subscription = CKDatabaseSubscription()
+        let notificationInfo = CKSubscription.NotificationInfo()
+        notificationInfo.shouldSendContentAvailable = true
+        subscription.notificationInfo = notificationInfo
+        return CKModifySubscriptionsOperation(subscriptionsToSave: [subscription], subscriptionIDsToDelete: nil)
+    }
+
     override init() {
         super.init()
 
-        let privateSubscription = CKDatabaseSubscription()
-        let notificationInfo = CKSubscription.NotificationInfo()
-        notificationInfo.shouldSendContentAvailable = true
-        privateSubscription.notificationInfo = notificationInfo
-        let operation = CKModifySubscriptionsOperation(subscriptionsToSave: [privateSubscription], subscriptionIDsToDelete: nil)
+        // make sure we're subscribed to both databases
+        container.privateCloudDatabase.add(databaseSubscription())
+        container.sharedCloudDatabase.add(databaseSubscription())
 
-        container.privateCloudDatabase.add(operation)
-
+        // make sure we have a "todos" zone
         let todoZone = CKRecordZone(zoneName: "todos")
         let zoneOperation = CKModifyRecordZonesOperation(recordZonesToSave: [todoZone], recordZoneIDsToDelete: nil)
         container.privateCloudDatabase.add(zoneOperation)
     }
 
-    private(set) var lists = [CKRecord]()
-    private(set) var todos = [CKRecord]()
-    private(set) var shares = [CKShare]()
+    private var records = [CloudRecord]()
+
+    private func removeRecord(_ recordIDToRemove: CKRecord.ID) {
+        records.removeAll { (localRecord) -> Bool in
+            localRecord.record.recordID == recordIDToRemove
+        }
+    }
+
+    private func removeRecord(_ recordToRemove: CloudRecord) {
+        records.removeAll { (localRecord) -> Bool in
+            localRecord.record.recordID == recordToRemove.record.recordID
+        }
+    }
+
+    private func updateRecord(_ newRecord: CloudRecord) {
+        removeRecord(newRecord)
+        records.append(newRecord)
+    }
+
+    var lists: [CloudRecord] {
+        return records.filter({ (record) -> Bool in
+            record.type == .list
+        })
+    }
+
+    var todos: [CloudRecord] {
+        return records.filter({ (record) -> Bool in
+            record.type == .todo
+        })
+    }
+
+    var shares: [CloudRecord] {
+        return records.filter({ (record) -> Bool in
+            record.type == .share
+        })
+    }
 
     private var zoneChangeTokens = [CKRecordZone.ID: CKServerChangeToken]()
-    private var databaseChangeToken: CKServerChangeToken?
-    private var todoZoneID: CKRecordZone.ID?
+    private var databaseChangeTokens = [RecordLocation: CKServerChangeToken]()
+    private var todoZoneIDs = [RecordLocation: CKRecordZone.ID]()
 
-    func fetchUpdates() {
+    func fetchAllUpdates() {
+        fetchUpdates(in: .privateDatabase)
+        fetchUpdates(in: .sharedDatabase)
+    }
+
+    func fetchUpdates(in location: RecordLocation) {
+        let database = location.database()
         var zones = [CKRecordZone.ID]()
 
-        let zonesOp = fetchChangedZones { newZones in
+        let zonesOp = fetchChangedZones(in: location) { newZones in
             zones = newZones
         }
 
-        container.privateCloudDatabase.add(zonesOp)
+        database.add(zonesOp)
 
         let next = BlockOperation {
-            let changesOp = self.fetchChanges(in: zones)
-            self.container.privateCloudDatabase.add(changesOp)
+            guard zones.count != 0 else { return }
+            let changesOp = self.fetchChanges(in: zones, location: location)
+            database.add(changesOp)
 
             let completionOp = BlockOperation {
                 NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
@@ -84,11 +170,11 @@ class ToDoCloud: NSObject {
 
         if let shareReference = record.share,
             let share = shares.first(where: { (share) -> Bool in
-                share.recordID == shareReference.recordID
+                share.record.recordID == shareReference.recordID
             }) {
 
             // existing share
-            shareController = UICloudSharingController(share: share, container: container)
+            shareController = UICloudSharingController(share: share.record as! CKShare, container: container)
         } else {
 
             // new share
@@ -99,32 +185,7 @@ class ToDoCloud: NSObject {
 
                 op.modifyRecordsCompletionBlock = { saved, _, error in
                     saved?.forEach({ (record) in
-                        if let recordAsShare = record as? CKShare {
-                            // update share
-                            self.shares.removeAll(where: { (localShare) -> Bool in
-                                localShare.recordID == recordAsShare.recordID
-                            })
-                            self.shares.append(recordAsShare)
-                        } else {
-                            // update record
-                            switch record.recordType {
-                            case "todo":
-                                self.todos.removeAll(where: { (localTodo) -> Bool in
-                                    localTodo.recordID == record.recordID
-                                })
-                                self.todos.append(record)
-
-                            case "list":
-                                self.lists.removeAll(where: { (localList) -> Bool in
-                                    localList.recordID == record.recordID
-                                })
-                                self.lists.append(record)
-
-                            default:
-                                break
-                            }
-
-                        }
+                        self.updateRecord(CloudRecord(with: record, location: .privateDatabase))
                     })
 
                     handler(newShare, self.container, error)
@@ -139,8 +200,8 @@ class ToDoCloud: NSObject {
         return shareController
     }
 
-    func save(record: CKRecord) {
-        let saveOperation = CKModifyRecordsOperation(recordsToSave: [record], recordIDsToDelete: nil)
+    func save(record: CloudRecord) {
+        let saveOperation = CKModifyRecordsOperation(recordsToSave: [record.record], recordIDsToDelete: nil)
 
         saveOperation.modifyRecordsCompletionBlock = { savedRecords, deletedIDs, error in
             guard let records = savedRecords else {
@@ -148,31 +209,18 @@ class ToDoCloud: NSObject {
                 return
             }
 
-            for record in records {
-                switch record.recordType {
-                case "todo":
-                    self.todos.removeAll(where: { (local) -> Bool in
-                        record.recordID == local.recordID
-                    })
-                    self.todos.append(record)
-                case "list":
-                    self.lists.removeAll(where: { (local) -> Bool in
-                        record.recordID == local.recordID
-                    })
-                    self.lists.append(record)
-                default:
-                    break
-                }
+            for newRecord in records {
+                self.updateRecord(CloudRecord(with: newRecord, location: record.location))
             }
 
             NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
         }
 
-        container.privateCloudDatabase.add(saveOperation)
+        record.location.database().add(saveOperation)
     }
 
-    func createToDo(with dictionary: [String: CKRecordValueProtocol]) {
-        guard let todoZoneID = todoZoneID else { return }
+    func createToDo(with dictionary: [String: CKRecordValueProtocol], in location: RecordLocation) {
+        guard let todoZoneID = todoZoneIDs[location] else { return }
 
         let newTodoID = CKRecord.ID(zoneID: todoZoneID)
         let newTodo = CKRecord(recordType: "todo", recordID: newTodoID)
@@ -182,20 +230,20 @@ class ToDoCloud: NSObject {
         newTodo["list"] = dictionary["list"]
         newTodo.parent = dictionary["parent"] as? CKRecord.Reference
 
-        save(record: newTodo)
+        save(record: CloudRecord(with: newTodo, location: location))
     }
 
     func createList(title: String) {
-        guard let todoZoneID = todoZoneID else { return }
+        guard let todoZoneID = todoZoneIDs[.privateDatabase] else { return }
         let newListID = CKRecord.ID(zoneID: todoZoneID)
         let newList = CKRecord(recordType: "list", recordID: newListID)
         newList["title"] = title
 
-        save(record: newList)
+        save(record: CloudRecord(with: newList, location: .privateDatabase))
     }
 
-    func deleteRecord(id: CKRecord.ID) {
-        let deleteOperation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: [id])
+    func deleteRecord(_ record: CloudRecord) {
+        let deleteOperation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: [record.record.recordID])
 
         deleteOperation.modifyRecordsCompletionBlock = { savedRecords, deletedIDs, error in
             guard let deletedIDs = deletedIDs else {
@@ -204,48 +252,59 @@ class ToDoCloud: NSObject {
             }
 
             for recordID in deletedIDs {
-                self.todos.removeAll(where: { (local) -> Bool in
-                    recordID == local.recordID
-                })
-                self.lists.removeAll(where: { (local) -> Bool in
-                    recordID == local.recordID
-                })
+                self.removeRecord(recordID)
             }
 
             NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
         }
 
-        container.privateCloudDatabase.add(deleteOperation)
+        record.location.database().add(deleteOperation)
     }
 
-    private func fetchChangedZones(completion: @escaping ([CKRecordZone.ID]) -> Void) -> CKDatabaseOperation {
+    func deleteRecord(_ recordID: CKRecord.ID, in location: RecordLocation) {
+        let deleteOperation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: [recordID])
+
+        deleteOperation.modifyRecordsCompletionBlock = { savedRecords, deletedIDs, error in
+            guard let deletedIDs = deletedIDs else {
+                print("Error saving records: \(String(describing: error))")
+                return
+            }
+
+            for recordID in deletedIDs {
+                self.removeRecord(recordID)
+            }
+
+            NotificationCenter.default.post(name: .ToDoCloudDidUpdate, object: self)
+        }
+
+        location.database().add(deleteOperation)
+
+    }
+
+    private func fetchChangedZones(in location: RecordLocation, completion: @escaping ([CKRecordZone.ID]) -> Void) -> CKDatabaseOperation {
         var zones = [CKRecordZone.ID]()
-        let changeOperation = CKFetchDatabaseChangesOperation(previousServerChangeToken: databaseChangeToken)
+        let changeOperation = CKFetchDatabaseChangesOperation(previousServerChangeToken: databaseChangeTokens[location])
 
         changeOperation.changeTokenUpdatedBlock = { token in
-            self.databaseChangeToken = token
+            self.databaseChangeTokens[location] = token
         }
 
         changeOperation.recordZoneWithIDChangedBlock = { zoneID in
             zones.append(zoneID)
             if zoneID.zoneName == "todos" {
-                self.todoZoneID = zoneID
+                self.todoZoneIDs[location] = zoneID
             }
         }
 
         changeOperation.recordZoneWithIDWasPurgedBlock = { zoneID in
             if zoneID.zoneName == "todos" {
-                self.lists = []
-                self.todos = []
-                self.shares = []
+                self.records = []
             }
         }
 
         changeOperation.recordZoneWithIDWasDeletedBlock = { zoneID in
             if zoneID.zoneName == "todos" {
-                self.lists = []
-                self.todos = []
-                self.shares = []
+                self.records = []
             }
         }
 
@@ -265,7 +324,7 @@ class ToDoCloud: NSObject {
         return changeOperation
     }
 
-    private func fetchChanges(in zones: [CKRecordZone.ID]) -> CKDatabaseOperation {
+    private func fetchChanges(in zones: [CKRecordZone.ID], location: RecordLocation) -> CKDatabaseOperation {
 
         let configurations = zones.map { (zone: CKRecordZone.ID) -> (CKRecordZone.ID, CKFetchRecordZoneChangesOperation.ZoneConfiguration)? in
             guard let token = zoneChangeTokens[zone] else { return nil }
@@ -280,45 +339,11 @@ class ToDoCloud: NSObject {
         let recordsOperation = CKFetchRecordZoneChangesOperation(recordZoneIDs: zones, configurationsByRecordZoneID: configsByID)
 
         recordsOperation.recordChangedBlock = { record in
-            switch record.recordType {
-            case "list":
-                self.lists.removeAll(where: { localRecord in
-                    record.recordID == localRecord.recordID
-                })
-                self.lists.append(record)
-
-            case "todo":
-                self.todos.removeAll(where: { localRecord in
-                    record.recordID == localRecord.recordID
-                })
-                self.todos.append(record)
-
-            default:
-                if let share = record as? CKShare {
-                    self.shares.removeAll(where: { localRecord in
-                        share.recordID == localRecord.recordID
-                    })
-                    self.shares.append(share)
-
-                }
-            }
+            self.updateRecord(CloudRecord(with: record, location: location))
         }
 
-        recordsOperation.recordWithIDWasDeletedBlock = { id, type in
-            switch type {
-            case "list":
-                self.lists.removeAll(where: { (record) -> Bool in
-                    record.recordID == id
-                })
-            case "todo":
-                self.todos.removeAll(where: { (record) -> Bool in
-                    record.recordID == id
-                })
-            default:
-                self.shares.removeAll(where: { (share) in
-                    share.recordID == id
-                })
-            }
+        recordsOperation.recordWithIDWasDeletedBlock = { id, _ in
+            self.removeRecord(id)
         }
 
         recordsOperation.recordZoneFetchCompletionBlock = { zoneID, token, data, moreComing, error in
@@ -350,7 +375,7 @@ extension ToDoCloud: UICloudSharingControllerDelegate {
 
     func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
         guard let share = csc.share else { return }
-        deleteRecord(id: share.recordID)
+        deleteRecord(share.recordID, in: .privateDatabase)
     }
 
     func itemTitle(for csc: UICloudSharingController) -> String? {
