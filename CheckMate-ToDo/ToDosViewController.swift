@@ -27,9 +27,22 @@ class ToDosViewController: UITableViewController {
         super.viewDidAppear(animated)
 
         let addItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(newItem))
-        navigationItem.rightBarButtonItems = [addItem, editButtonItem]
+        let shareItem = UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(presentShare(_:)))
+        navigationItem.rightBarButtonItems = [addItem, editButtonItem, shareItem]
 
         NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .ToDoCloudDidUpdate, object: cloud)
+    }
+
+    @objc func presentShare(_ sender: UIBarButtonItem) {
+        guard let list = list else { return }
+
+        let shareController = cloud.shareController(for: list)
+
+        shareController.availablePermissions = [.allowPrivate, .allowReadWrite]
+
+        shareController.popoverPresentationController?.barButtonItem = sender
+
+        present(shareController, animated: true, completion: nil)
     }
 
     @objc func newItem() {
@@ -45,8 +58,15 @@ class ToDosViewController: UITableViewController {
         if let item = editingItem {
             editVC.titleField.text = item["title"]
             editVC.noteField.text = item["note"]
-            editVC.dateCompletedField.text = String(describing: item["dateCompleted"])
-            editVC.completedSwitch.isOn = item["dateCompleted"] != nil
+            if let date = item["dateCompleted"] as? Date {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .short
+                formatter.timeStyle = .short
+                editVC.dateCompletedField.text = formatter.string(from: date)
+                editVC.completedSwitch.isOn = true
+            } else {
+                editVC.completedSwitch.isOn = false
+            }
         }
 
         present(nav, animated: true, completion: nil)
@@ -108,7 +128,16 @@ extension ToDosViewController: EditToDoViewControllerDelegate {
         if let editingToDo = editingItem {
             editingToDo["title"] = vc.titleField.text
             editingToDo["note"] = vc.noteField.text
-            editingToDo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
+
+            // If done and no date set, set date to now.
+            // Otherwise unset date.
+            if vc.completedSwitch.isOn == true,
+                editingToDo["dateCompleted"] == nil {
+
+                editingToDo["dateCompleted"] = Date()
+            } else {
+                editingToDo["dateCompleted"] = nil
+            }
 
             cloud.save(record: editingToDo)
             editingItem = nil
@@ -121,7 +150,7 @@ extension ToDosViewController: EditToDoViewControllerDelegate {
             newTodo["note"] = vc.noteField.text
             newTodo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
             newTodo["list"] = CKRecord.Reference(record: list, action: .deleteSelf)
-
+            newTodo["parent"] = CKRecord.Reference(record: list, action: .none)
             cloud.createToDo(with: newTodo)
         }
 

@@ -42,6 +42,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UISplitViewControllerDele
         }
     }
 
+    func application(_ application: UIApplication, userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata) {
+        let op = CKAcceptSharesOperation(shareMetadatas: [cloudKitShareMetadata])
+        op.acceptSharesCompletionBlock = { error in
+            ToDoCloud.shared.fetchUpdates()
+        }
+
+        CKContainer.default().add(op)
+    }
+
     // MARK: - Split view
 
     func splitViewController(_ splitViewController: UISplitViewController, collapseSecondary secondaryViewController:UIViewController, onto primaryViewController:UIViewController) -> Bool {

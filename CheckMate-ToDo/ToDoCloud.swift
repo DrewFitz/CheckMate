@@ -7,17 +7,31 @@
 //
 
 import CloudKit
+import UIKit
 import os.log
 
 extension Notification.Name {
     static let ToDoCloudDidUpdate = Notification.Name("ToDoCloudDidUpdate")
 }
 
-class ToDoCloud {
+class ToDoCloud: NSObject {
 
     static let shared = ToDoCloud()
+    private let container = CKContainer.default()
 
-    init() {
+    private let group: CKOperationGroup = {
+        let group = CKOperationGroup()
+
+        group.expectedSendSize = .kilobytes
+        group.expectedReceiveSize = .kilobytes
+
+        group.name = "Fetch all data"
+        return group
+    }()
+
+    override init() {
+        super.init()
+
         let privateSubscription = CKDatabaseSubscription()
         let notificationInfo = CKSubscription.NotificationInfo()
         notificationInfo.shouldSendContentAvailable = true
@@ -33,21 +47,11 @@ class ToDoCloud {
 
     private(set) var lists = [CKRecord]()
     private(set) var todos = [CKRecord]()
+    private(set) var shares = [CKShare]()
 
-    private let container = CKContainer.default()
     private var zoneChangeTokens = [CKRecordZone.ID: CKServerChangeToken]()
     private var databaseChangeToken: CKServerChangeToken?
     private var todoZoneID: CKRecordZone.ID?
-
-    private let group: CKOperationGroup = {
-        let group = CKOperationGroup()
-
-        group.expectedSendSize = .kilobytes
-        group.expectedReceiveSize = .kilobytes
-
-        group.name = "Fetch all data"
-        return group
-    }()
 
     func fetchUpdates() {
         var zones = [CKRecordZone.ID]()
@@ -73,6 +77,66 @@ class ToDoCloud {
         next.addDependency(zonesOp)
 
         OperationQueue.main.addOperation(next)
+    }
+
+    func shareController(for record: CKRecord) -> UICloudSharingController {
+        let shareController: UICloudSharingController
+
+        if let shareReference = record.share,
+            let share = shares.first(where: { (share) -> Bool in
+                share.recordID == shareReference.recordID
+            }) {
+
+            // existing share
+            shareController = UICloudSharingController(share: share, container: container)
+        } else {
+
+            // new share
+            shareController = UICloudSharingController(preparationHandler: { (controller, handler) in
+                let newShare = CKShare(rootRecord: record)
+
+                let op = CKModifyRecordsOperation(recordsToSave: [newShare, record], recordIDsToDelete: nil)
+
+                op.modifyRecordsCompletionBlock = { saved, _, error in
+                    saved?.forEach({ (record) in
+                        if let recordAsShare = record as? CKShare {
+                            // update share
+                            self.shares.removeAll(where: { (localShare) -> Bool in
+                                localShare.recordID == recordAsShare.recordID
+                            })
+                            self.shares.append(recordAsShare)
+                        } else {
+                            // update record
+                            switch record.recordType {
+                            case "todo":
+                                self.todos.removeAll(where: { (localTodo) -> Bool in
+                                    localTodo.recordID == record.recordID
+                                })
+                                self.todos.append(record)
+
+                            case "list":
+                                self.lists.removeAll(where: { (localList) -> Bool in
+                                    localList.recordID == record.recordID
+                                })
+                                self.lists.append(record)
+
+                            default:
+                                break
+                            }
+
+                        }
+                    })
+
+                    handler(newShare, self.container, error)
+                }
+
+                self.container.privateCloudDatabase.add(op)
+            })
+        }
+
+        shareController.delegate = self
+
+        return shareController
     }
 
     func save(record: CKRecord) {
@@ -116,6 +180,7 @@ class ToDoCloud {
         newTodo["note"] = dictionary["note"]
         newTodo["dateCompleted"] = dictionary["dateCompleted"]
         newTodo["list"] = dictionary["list"]
+        newTodo.parent = dictionary["parent"] as? CKRecord.Reference
 
         save(record: newTodo)
     }
@@ -172,6 +237,7 @@ class ToDoCloud {
             if zoneID.zoneName == "todos" {
                 self.lists = []
                 self.todos = []
+                self.shares = []
             }
         }
 
@@ -179,6 +245,7 @@ class ToDoCloud {
             if zoneID.zoneName == "todos" {
                 self.lists = []
                 self.todos = []
+                self.shares = []
             }
         }
 
@@ -227,7 +294,13 @@ class ToDoCloud {
                 self.todos.append(record)
 
             default:
-                break
+                if let share = record as? CKShare {
+                    self.shares.removeAll(where: { localRecord in
+                        share.recordID == localRecord.recordID
+                    })
+                    self.shares.append(share)
+
+                }
             }
         }
 
@@ -242,7 +315,9 @@ class ToDoCloud {
                     record.recordID == id
                 })
             default:
-                break
+                self.shares.removeAll(where: { (share) in
+                    share.recordID == id
+                })
             }
         }
 
@@ -265,5 +340,20 @@ class ToDoCloud {
         recordsOperation.group = group
 
         return recordsOperation
+    }
+}
+
+extension ToDoCloud: UICloudSharingControllerDelegate {
+    func cloudSharingController(_ csc: UICloudSharingController, failedToSaveShareWithError error: Error) {
+        os_log(.error, "Faled to save share with error: %{public}s", error.localizedDescription)
+    }
+
+    func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
+        guard let share = csc.share else { return }
+        deleteRecord(id: share.recordID)
+    }
+
+    func itemTitle(for csc: UICloudSharingController) -> String? {
+        return "Item"
     }
 }
