@@ -102,7 +102,7 @@ class ToDoCloud: NSObject {
     private var databaseChangeTokens = [RecordLocation: CKServerChangeToken]()
 
 
-    // MARK: Private Data Accessors
+    // MARK: - Private Data Accessors
 
     private func removeRecord(_ recordIDToRemove: CKRecord.ID) {
         records.removeAll { (localRecord) -> Bool in
@@ -121,7 +121,7 @@ class ToDoCloud: NSObject {
         records.append(newRecord)
     }
 
-    // MARK: Public Data Accessors
+    // MARK: - Public Data Accessors
 
     var lists: [CloudRecord] {
         return records.filter({ (record) -> Bool in
