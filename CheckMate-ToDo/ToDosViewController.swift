@@ -153,31 +153,41 @@ class ToDosViewController: UITableViewController {
 
 extension ToDosViewController: EditToDoViewControllerDelegate {
     func done(_ vc: EditToDoViewController) {
-        defer { dismiss(animated: true, completion: nil) }
+        defer {
+            editingItem = nil
+            dismiss(animated: true, completion: nil)
+        }
+
+        guard let newTitle = vc.titleField.text,
+            let newNote = vc.noteField.text,
+            newTitle.isEmpty == false || newNote.isEmpty == false else {
+                return
+        }
 
         if let editingToDo = editingItem {
-            editingToDo.record["title"] = vc.titleField.text
-            editingToDo.record["note"] = vc.noteField.text
+            editingToDo.record["title"] = newTitle
+            editingToDo.record["note"] = newNote
 
-            // If done and no date set, set date to now.
-            // Otherwise unset date.
-            if vc.completedSwitch.isOn == true,
-                editingToDo.record["dateCompleted"] == nil {
-
-                editingToDo.record["dateCompleted"] = Date()
+            if vc.completedSwitch.isOn == true {
+                if editingToDo.record["dateCompleted"] == nil {
+                    // No completion date, so set it to now
+                    editingToDo.record["dateCompleted"] = Date()
+                } else {
+                    // We already have a completion date, don't overwrite it
+                }
             } else {
+                // Switch is off, erase the completion date if there is one
                 editingToDo.record["dateCompleted"] = nil
             }
 
             cloud.save(record: editingToDo)
-            editingItem = nil
 
         } else {
             guard let list = list else { return }
 
             var newTodo = [String: Any]()
-            newTodo["title"] = vc.titleField.text
-            newTodo["note"] = vc.noteField.text
+            newTodo["title"] = newTitle
+            newTodo["note"] = newNote
             newTodo["dateCompleted"] = vc.completedSwitch.isOn ? Date() : nil
             cloud.createToDo(with: newTodo, in: list)
         }
