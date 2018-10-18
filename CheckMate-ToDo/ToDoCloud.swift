@@ -76,6 +76,115 @@ class CloudRecord: NSSecureCoding {
     }
 }
 
+enum ErrorHandling {
+    enum Strategy {
+        case crashy
+        case resilient
+    }
+
+    case unknown
+    case retryAfter(seconds: Double?)
+    case partialFailure(errorsByID: [AnyHashable: Error])
+    case mergeAndRetry(ancestor: CKRecord?, server: CKRecord?)
+    case immediateRetry
+    case noRetry
+    case nukeCacheAndFetchEverything
+    case checkServerDataBeforeRetrying
+    case logAndCrash
+    case promptUser
+    case retryWhenNetworkIsAvailable
+    case noErrorWithThisRecord
+    case splitUpAndRetry
+    case redirectUserToVerificationURL
+    case fixInconsistencyAndRetryIfNeeded
+
+    init(from error: CKError, with strategy: Strategy = .resilient) {
+
+        switch error.code {
+
+        // Broken Builds, Programmer Errors, or Acts of God
+        case .internalError,
+             .missingEntitlement,
+             .constraintViolation,
+             .serverRejectedRequest,
+             .invalidArguments,
+             .badContainer,
+             .badDatabase:
+            self = (strategy == .crashy) ? .logAndCrash : .promptUser
+
+        // Essentially a merge conflict
+        case .serverRecordChanged:
+            self = .mergeAndRetry(ancestor: error.ancestorRecord, server: error.serverRecord)
+
+        // General network fuckery, make sure the request wasn't actually saved before sending it up again
+        case .serverResponseLost:
+            self = .checkServerDataBeforeRetrying
+
+        // There's data inconsistency that needs addressing
+        case .zoneNotFound,
+             .alreadyShared:
+            self = .fixInconsistencyAndRetryIfNeeded
+
+        // Does what it says on the tin
+        case .operationCancelled:
+            self = .noRetry
+
+        // We can't fetch deltas, gotta start all over
+        case .changeTokenExpired:
+            self = .nukeCacheAndFetchEverything
+
+        // Configuration issue, we need to make smaller batch requests
+        case .limitExceeded:
+            self = .splitUpAndRetry
+
+        // Assorted things the user has to fix or manually retry
+        case .managedAccountRestricted,
+             .notAuthenticated,
+             .incompatibleVersion,
+             .tooManyParticipants,
+             .permissionFailure,
+             .unknownItem,
+             .referenceViolation,
+             .userDeletedZone,
+             .assetFileModified,
+             .assetFileNotFound,
+             .assetNotAvailable:
+            self = .promptUser
+
+        // Need to wait until there's network access again
+        case .networkUnavailable:
+            self = .retryWhenNetworkIsAvailable
+
+        // General network error, just retry
+        case .networkFailure:
+            self = .immediateRetry
+
+        // User needs to complete Apple's account-link flow
+        case .participantMayNeedVerification:
+            self = .redirectUserToVerificationURL
+
+        // Temporarily can't complete this request, automatically try again later
+        case .zoneBusy,
+             .serviceUnavailable,
+             .requestRateLimited:
+            self = .retryAfter(seconds: error.retryAfterSeconds)
+
+        // These two are related to batching requests
+        case .partialFailure:
+            self = .partialFailure(errorsByID: error.partialErrorsByItemID!)
+        case .batchRequestFailed:
+            self = .noErrorWithThisRecord
+
+        // IDK what the heck you would actually do about this :shrug:
+        case .quotaExceeded:
+            self = .unknown
+
+        case .resultsTruncated:
+            fatalError("This is deprecated and should never be returned by the API since iOS 10")
+        }
+    }
+}
+
 class ToDoCloud: NSObject {
 
     // MARK: Singleton
