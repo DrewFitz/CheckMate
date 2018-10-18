@@ -119,6 +119,17 @@ class ToDosViewController: UITableViewController {
             break
         }
     }
+
+    override func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let editAction = UIContextualAction(style: .normal, title: "Edit") { (action, view, completion) in
+            self.editingItem = self.items[indexPath.row]
+            self.presentEditor()
+            completion(true)
+        }
+        let config = UISwipeActionsConfiguration(actions: [editAction])
+
+        return config
+    }
 }
 
 extension ToDosViewController: EditToDoViewControllerDelegate {
